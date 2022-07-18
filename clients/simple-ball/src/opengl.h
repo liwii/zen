@@ -1,0 +1,1 @@
+int get_shared_shader_fd(const char* shader);

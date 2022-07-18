@@ -18,6 +18,7 @@
 
 #include "buffer.h"
 #include "cuboid_window.h"
+#include "opengl.h"
 #include "ray.h"
 
 const char *vertex_shader =
@@ -255,42 +256,22 @@ main(void)
   app.texture_buffer = texture_data;
 
   size_t vertex_shader_len = strlen(vertex_shader);
-  int vertex_shader_fd = create_shared_fd(vertex_shader_len);
+  int vertex_shader_fd = get_shared_shader_fd(vertex_shader);
   if (vertex_shader_fd == -1) {
     return EXIT_FAILURE;
   }
-
-  void *vertex_shader_data = mmap(
-      NULL, vertex_shader_len, PROT_WRITE, MAP_SHARED, vertex_shader_fd, 0);
-  if (vertex_shader_data == MAP_FAILED) {
-    fprintf(stderr, "mmap failed\n");
-    return EXIT_FAILURE;
-  }
-  memcpy(vertex_shader_data, vertex_shader, vertex_shader_len);
-  munmap(vertex_shader_data, strlen(vertex_shader));
 
   zgn_opengl_shader_program_set_vertex_shader(
       frame_shader, vertex_shader_fd, vertex_shader_len);
   zgn_opengl_shader_program_set_vertex_shader(
       front_shader, vertex_shader_fd, vertex_shader_len);
 
-  size_t fragment_shader_len = strlen(fragment_shader);
-  int fragment_shader_fd = create_shared_fd(fragment_shader_len);
+  int fragment_shader_fd = get_shared_shader_fd(fragment_shader);
   if (fragment_shader_fd == -1) {
     return EXIT_FAILURE;
   }
-
-  void *fragment_shader_data = mmap(
-      NULL, fragment_shader_len, PROT_WRITE, MAP_SHARED, fragment_shader_fd, 0);
-  if (fragment_shader_data == MAP_FAILED) {
-    fprintf(stderr, "mmap failed\n");
-    return EXIT_FAILURE;
-  }
-  memcpy(fragment_shader_data, fragment_shader, fragment_shader_len);
-  munmap(fragment_shader_data, fragment_shader_len);
-
   zgn_opengl_shader_program_set_fragment_shader(
-      frame_shader, fragment_shader_fd, fragment_shader_len);
+      frame_shader, fragment_shader_fd, strlen(fragment_shader));
   zgn_opengl_shader_program_link(frame_shader);
   set_shader_uniform_variable(
       frame_shader, "color", glm::vec4(0.0f, 1.0f, 1.0f, 1.0f));
@@ -304,25 +285,15 @@ main(void)
       ZGN_OPENGL_VERTEX_ATTRIBUTE_TYPE_FLOAT, false, sizeof(Vertex),
       offsetof(Vertex, p));
 
-  size_t texture_fragment_shader_len = strlen(texture_fragment_shader);
   int texture_fragment_shader_fd =
-      create_shared_fd(texture_fragment_shader_len);
+      get_shared_shader_fd(texture_fragment_shader);
+
   if (texture_fragment_shader_fd == -1) {
     return EXIT_FAILURE;
   }
 
-  void *texture_fragment_shader_data = mmap(NULL, texture_fragment_shader_len,
-      PROT_WRITE, MAP_SHARED, texture_fragment_shader_fd, 0);
-  if (texture_fragment_shader_data == MAP_FAILED) {
-    fprintf(stderr, "mmap failed\n");
-    return EXIT_FAILURE;
-  }
-  memcpy(texture_fragment_shader_data, texture_fragment_shader,
-      texture_fragment_shader_len);
-  munmap(texture_fragment_shader_data, texture_fragment_shader_len);
-
-  zgn_opengl_shader_program_set_fragment_shader(
-      front_shader, texture_fragment_shader_fd, texture_fragment_shader_len);
+  zgn_opengl_shader_program_set_fragment_shader(front_shader,
+      texture_fragment_shader_fd, strlen(texture_fragment_shader));
   zgn_opengl_shader_program_link(front_shader);
   set_shader_uniform_variable(front_shader, "rotate", app.rotate);
   zgn_opengl_component_attach_shader_program(front_component, front_shader);
