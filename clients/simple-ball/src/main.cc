@@ -117,34 +117,6 @@ static const struct wl_callback_listener frame_callback_listener = {
     frame_callback_handler,
 };
 
-void
-set_shader_uniform_variable(struct zgn_opengl_shader_program *shader,
-    const char *location, glm::mat4 mat)
-{
-  struct wl_array array;
-  wl_array_init(&array);
-  size_t size = sizeof(float) * 16;
-  float *data = (float *)wl_array_add(&array, size);
-  memcpy(data, &mat, size);
-  zgn_opengl_shader_program_set_uniform_float_matrix(
-      shader, location, 4, 4, false, 1, &array);
-  wl_array_release(&array);
-}
-
-void
-set_shader_uniform_variable(struct zgn_opengl_shader_program *shader,
-    const char *location, glm::vec4 vec)
-{
-  struct wl_array array;
-  wl_array_init(&array);
-  size_t size = sizeof(float) * 4;
-  float *data = (float *)wl_array_add(&array, size);
-  memcpy(data, &vec, size);
-  zgn_opengl_shader_program_set_uniform_float_vector(
-      shader, location, 4, 1, &array);
-  wl_array_release(&array);
-}
-
 static void
 next_frame(struct app *app, uint32_t time)
 {
