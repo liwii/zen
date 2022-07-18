@@ -2,9 +2,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/mman.h>
+#include <unistd.h>
 #include <wayland-client.h>
 #include <zigen-client-protocol.h>
 #include <zigen-opengl-client-protocol.h>
+
+#include <glm/glm.hpp>
+
+struct Vertex {
+  glm::vec3 p;
+  float u, v;
+};
 
 struct app {
   struct wl_display *display;
@@ -65,6 +74,55 @@ static void next_frame(struct zgn_virtual_object *obj) {
   zgn_virtual_object_commit(obj);
 }
 
+struct buffer {
+  off_t size;
+  int fd;
+  void *data;
+  struct wl_shm_pool *pool;
+  struct wl_buffer *buffer;
+};
+
+static int create_shared_fd(off_t size) {
+  const char *socket_name = "zen-simple-ball";
+  int fd = memfd_create(socket_name, MFD_CLOEXEC | MFD_ALLOW_SEALING);
+  if (fd < 0) {
+    fprintf(stderr, "Failed to create fd\n");
+    return -1;
+  }
+
+  unlink(socket_name);
+
+  if (ftruncate(fd, size) < 0) {
+    close(fd);
+    fprintf(stderr, "Failed to create fd\n");
+    return -1;
+  }
+  return fd;
+}
+
+static struct buffer* create_buffer(app *app, off_t size) {
+  struct buffer *buf = (struct buffer*) malloc(sizeof(struct buffer));
+
+  buf->fd = create_shared_fd(size);
+  if (buf->fd == -1) {
+    fprintf(stderr, "Failed to create buffer\n");
+    free(buf);
+    return NULL;
+  }
+
+  buf->data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, buf->fd, 0);
+
+  if (buf->data == MAP_FAILED) {
+    close(buf->fd);
+    free(buf);
+    return NULL;
+  }
+
+  buf->pool = wl_shm_create_pool(app->shm, buf->fd, size);
+  buf->buffer = wl_shm_pool_create_buffer(buf->pool, 0, size, 1, size, 0);
+
+  return buf;
+}
 
 
 int
@@ -85,7 +143,6 @@ main(void)
   }
   wl_registry_add_listener(app.registry, &registry_listener, &app);
   wl_display_dispatch(app.display);
-  wl_display_roundtrip(app.display);
 
 
   struct zgn_virtual_object *virtual_object;
@@ -94,12 +151,41 @@ main(void)
   struct zgn_opengl_vertex_buffer *vertex_buffer;
   vertex_buffer = zgn_opengl_create_vertex_buffer(app.opengl);
 
-  struct zgn_opengl_component *component;
-  component = zgn_opengl_create_opengl_component(app.opengl, virtual_object);
+  struct zgn_opengl_shader_program *frame_shader, *front_shader;
+  frame_shader = zgn_opengl_create_shader_program(app.opengl);
+  front_shader = zgn_opengl_create_shader_program(app.opengl);
+
+  struct zgn_opengl_texture *texture;
+  texture = zgn_opengl_create_texture(app.opengl);
+
+  struct zgn_opengl_component *frame_component, *front_component;
+  frame_component = zgn_opengl_create_opengl_component(app.opengl, virtual_object);
+  front_component = zgn_opengl_create_opengl_component(app.opengl, virtual_object);
+
+  struct zgn_opengl_element_array_buffer *frame_element_array, *front_element_array;
+  frame_element_array = zgn_opengl_create_element_array_buffer(app.opengl);
+  front_element_array = zgn_opengl_create_element_array_buffer(app.opengl);
+
+  struct buffer *vertex_buffer_data, *frame_element_array_data, *front_element_array_data;
+
+  vertex_buffer_data = create_buffer(&app, sizeof(Vertex) * 8);
+  frame_element_array_data = create_buffer(&app, sizeof(u_short) * 24);
+  front_element_array_data = create_buffer(&app, sizeof(u_short) * 24);
 
   (void)vertex_buffer;
-  (void)component;
+  (void)frame_component;
+  (void)front_component;
+  (void)frame_element_array;
+  (void)front_element_array;
+  (void)vertex_buffer_data;
+  (void)frame_element_array_data;
+  (void)front_element_array_data;
+  (void)frame_shader;
+  (void)front_shader;
+  (void)texture;
+  
 
+  wl_display_roundtrip(app.display);
   next_frame(virtual_object);
 
   while(true) {
