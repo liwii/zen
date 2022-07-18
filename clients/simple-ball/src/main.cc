@@ -56,6 +56,22 @@ struct app {
   struct zgn_compositor *compositor;
   struct zgn_opengl *opengl;
   struct zgn_shell *shell;
+  struct zgn_virtual_object *obj;
+  struct zgn_opengl_texture *texture;
+  struct buffer *texture_buffer;
+  struct zgn_opengl_component *front_component;
+};
+
+struct ColorBGRA {
+  uint8_t b, g, r, a;
+};
+
+struct buffer {
+  off_t size;
+  int fd;
+  void *data;
+  struct wl_shm_pool *pool;
+  struct wl_buffer *buffer;
 };
 
 
@@ -92,33 +108,44 @@ const struct wl_registry_listener registry_listener = {
     global_registry_remove,
 };
 
-static void next_frame(struct zgn_virtual_object *obj);
+static void next_frame(struct app *app);
 static void frame_callback_handler(
   void *data, struct wl_callback *callback, uint32_t callback_data
 ) {
   (void)callback_data;
-  struct zgn_virtual_object *obj = (struct zgn_virtual_object *) data;
+  struct app *app = (struct app *) data;
   wl_callback_destroy(callback);
-  next_frame(obj);
+  next_frame(app);
 }
 
 static const struct wl_callback_listener frame_callback_listener = {
   frame_callback_handler,
 };
 
-static void next_frame(struct zgn_virtual_object *obj) {
-  wl_callback *frame_callback = zgn_virtual_object_frame(obj);
-  wl_callback_add_listener(frame_callback, &frame_callback_listener, obj);
-  zgn_virtual_object_commit(obj);
+static void next_frame(struct app *app) {
+  struct ColorBGRA *pixel = (struct ColorBGRA *)app->texture_buffer->data;
+  glm::vec2 position = {1, 1};
+  for (int x = 0; x < 256; x++) {
+    for (int y = 0; y < 256; y++) {
+      int r2 = (position.x * UINT8_MAX - x) * (position.x * UINT8_MAX - x) +
+                (position.y * UINT8_MAX - y) * (position.y * UINT8_MAX - y);
+      pixel->a = r2 < 1024 ? 0 : UINT8_MAX;
+      pixel->r = x;
+      pixel->g = y;
+      pixel->b = UINT8_MAX;
+      pixel++;
+    }
+  }
+
+  zgn_opengl_texture_attach_2d(app->texture, app->texture_buffer->buffer);
+  zgn_opengl_component_attach_texture(app->front_component, app->texture);
+
+  //front_component_->Attach(texture_);
+  wl_callback *frame_callback = zgn_virtual_object_frame(app->obj);
+  wl_callback_add_listener(frame_callback, &frame_callback_listener, app);
+  zgn_virtual_object_commit(app->obj);
 }
 
-struct buffer {
-  off_t size;
-  int fd;
-  void *data;
-  struct wl_shm_pool *pool;
-  struct wl_buffer *buffer;
-};
 
 static int create_shared_fd(off_t size) {
   const char *socket_name = "zen-simple-ball";
@@ -158,6 +185,31 @@ static struct buffer* create_buffer(app *app, off_t size) {
 
   buf->pool = wl_shm_create_pool(app->shm, buf->fd, size);
   buf->buffer = wl_shm_pool_create_buffer(buf->pool, 0, size, 1, size, 0);
+
+  return buf;
+}
+
+static struct buffer* create_buffer(app *app, int32_t stride, int32_t height, int32_t width, enum wl_shm_format format) {
+  struct buffer *buf = (struct buffer*) malloc(sizeof(struct buffer));
+
+  size_t size = stride * height;
+  buf->fd = create_shared_fd(size);
+  if (buf->fd == -1) {
+    fprintf(stderr, "Failed to create buffer\n");
+    free(buf);
+    return NULL;
+  }
+
+  buf->data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, buf->fd, 0);
+
+  if (buf->data == MAP_FAILED) {
+    close(buf->fd);
+    free(buf);
+    return NULL;
+  }
+
+  buf->pool = wl_shm_create_pool(app->shm, buf->fd, size);
+  buf->buffer = wl_shm_pool_create_buffer(buf->pool, 0, width, height, stride, format);
 
   return buf;
 }
@@ -224,6 +276,7 @@ main(void)
 
   struct zgn_virtual_object *virtual_object;
   virtual_object = zgn_compositor_create_virtual_object(app.compositor);
+  app.obj = virtual_object;
 
   struct zgn_opengl_vertex_buffer *vertex_buffer;
   vertex_buffer = zgn_opengl_create_vertex_buffer(app.opengl);
@@ -235,19 +288,25 @@ main(void)
   struct zgn_opengl_texture *texture;
   texture = zgn_opengl_create_texture(app.opengl);
 
+  app.texture = texture;
+
   struct zgn_opengl_component *frame_component, *front_component;
   frame_component = zgn_opengl_create_opengl_component(app.opengl, virtual_object);
   front_component = zgn_opengl_create_opengl_component(app.opengl, virtual_object);
+  app.front_component = front_component;
 
   struct zgn_opengl_element_array_buffer *frame_element_array, *front_element_array;
   frame_element_array = zgn_opengl_create_element_array_buffer(app.opengl);
   front_element_array = zgn_opengl_create_element_array_buffer(app.opengl);
 
-  struct buffer *vertex_buffer_data, *frame_element_array_data, *front_element_array_data;
+  struct buffer *vertex_buffer_data, *frame_element_array_data, *front_element_array_data, *texture_data;
 
   vertex_buffer_data = create_buffer(&app, sizeof(Vertex) * 8);
   frame_element_array_data = create_buffer(&app, sizeof(u_short) * 24);
   front_element_array_data = create_buffer(&app, sizeof(u_short) * 24);
+  texture_data = create_buffer(&app, 256 * 4, 256, 256, WL_SHM_FORMAT_ARGB8888);
+  
+  app.texture_buffer = texture_data;
 
   size_t vertex_shader_len = strlen(vertex_shader);
   int vertex_shader_fd = create_shared_fd(vertex_shader_len);
@@ -264,6 +323,7 @@ main(void)
   munmap(vertex_shader_data, strlen(vertex_shader));
   
   zgn_opengl_shader_program_set_vertex_shader(frame_shader, vertex_shader_fd, vertex_shader_len);
+  zgn_opengl_shader_program_set_vertex_shader(front_shader, vertex_shader_fd, vertex_shader_len);
 
   size_t fragment_shader_len = strlen(fragment_shader);
   int fragment_shader_fd = create_shared_fd(fragment_shader_len);
@@ -289,6 +349,29 @@ main(void)
   zgn_opengl_component_set_topology(frame_component, ZGN_OPENGL_TOPOLOGY_LINES);
   zgn_opengl_component_add_vertex_attribute(frame_component, 0, 3, ZGN_OPENGL_VERTEX_ATTRIBUTE_TYPE_FLOAT, false, sizeof(Vertex), offsetof(Vertex, p));
 
+  size_t texture_fragment_shader_len = strlen(texture_fragment_shader);
+  int texture_fragment_shader_fd = create_shared_fd(texture_fragment_shader_len);
+  if(texture_fragment_shader_fd == -1) {
+    return EXIT_FAILURE;
+  }
+
+  void *texture_fragment_shader_data = mmap(NULL, texture_fragment_shader_len, PROT_WRITE, MAP_SHARED, texture_fragment_shader_fd, 0);
+  if(texture_fragment_shader_data == MAP_FAILED) {
+    fprintf(stderr, "mmap failed\n");
+    return EXIT_FAILURE;
+  }
+  memcpy(texture_fragment_shader_data, texture_fragment_shader, texture_fragment_shader_len);
+  munmap(texture_fragment_shader_data, texture_fragment_shader_len);
+
+  zgn_opengl_shader_program_set_fragment_shader(front_shader, texture_fragment_shader_fd, texture_fragment_shader_len);
+  zgn_opengl_shader_program_link(front_shader);
+  set_shader_uniform_variable(front_shader, "rotate", glm::mat4(1.0f));
+  zgn_opengl_component_attach_shader_program(front_component, front_shader);
+  zgn_opengl_component_set_count(front_component, 6);
+  zgn_opengl_component_set_topology(front_component, ZGN_OPENGL_TOPOLOGY_TRIANGLES);
+  zgn_opengl_component_add_vertex_attribute(front_component, 0, 3, ZGN_OPENGL_VERTEX_ATTRIBUTE_TYPE_FLOAT, false, sizeof(Vertex), offsetof(Vertex, p));
+  zgn_opengl_component_add_vertex_attribute(front_component, 1, 2, ZGN_OPENGL_VERTEX_ATTRIBUTE_TYPE_FLOAT, false, sizeof(Vertex), offsetof(Vertex, u));
+
   Vertex points[8];
 
   float length = 0.2f;
@@ -308,15 +391,22 @@ main(void)
 
   u_short frame_indices[24] = {
       0, 1, 2, 3, 4, 5, 6, 7, 0, 4, 1, 5, 2, 6, 3, 7, 0, 2, 1, 3, 4, 6, 5, 7};
-  u_short *indices = (u_short *)frame_element_array_data->data;
-  memcpy(indices, frame_indices, sizeof(frame_indices));
+  u_short *frame_array_indices = (u_short *)frame_element_array_data->data;
+  memcpy(frame_array_indices, frame_indices, sizeof(frame_indices));
   zgn_opengl_element_array_buffer_attach(frame_element_array, frame_element_array_data->buffer, ZGN_OPENGL_ELEMENT_ARRAY_INDICES_TYPE_UNSIGNED_SHORT);
   zgn_opengl_component_attach_element_array_buffer(frame_component, frame_element_array);
+
+  u_short front_indices[6] = {1, 7, 3, 1, 7, 5};
+  u_short *front_array_indices = (u_short *)front_element_array_data->data;
+  memcpy(front_array_indices, front_indices, sizeof(front_indices));
+  zgn_opengl_element_array_buffer_attach(front_element_array, front_element_array_data->buffer, ZGN_OPENGL_ELEMENT_ARRAY_INDICES_TYPE_UNSIGNED_SHORT);
+  zgn_opengl_component_attach_element_array_buffer(front_component, front_element_array);
 
   Vertex *vertices = (Vertex *)vertex_buffer_data->data;
   memcpy(vertices, points, sizeof(Vertex) * 8);
   zgn_opengl_vertex_buffer_attach(vertex_buffer, vertex_buffer_data->buffer);
   zgn_opengl_component_attach_vertex_buffer(frame_component, vertex_buffer);
+  zgn_opengl_component_attach_vertex_buffer(front_component, vertex_buffer);
 
   glm::vec3 half_size(length * 1.8);
   glm::quat quaternion;
@@ -344,16 +434,11 @@ main(void)
 
 
 
-  (void)cuboid_window;
-  (void)front_component;
-  (void)front_element_array;
-  (void)front_element_array_data;
-  (void)front_shader;
   (void)texture;
   
 
   wl_display_roundtrip(app.display);
-  next_frame(virtual_object);
+  next_frame(&app);
 
   while(true) {
     while(wl_display_prepare_read(app.display) != 0) {
