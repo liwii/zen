@@ -190,9 +190,6 @@ main(void)
   virtual_object = zgn_compositor_create_virtual_object(app.compositor);
   app.obj = virtual_object;
 
-  struct zgn_opengl_vertex_buffer *vertex_buffer;
-  vertex_buffer = zgn_opengl_create_vertex_buffer(app.opengl);
-
   struct zgn_opengl_shader_program *frame_shader, *front_shader;
   frame_shader = zgn_opengl_create_shader_program(app.opengl);
   front_shader = zgn_opengl_create_shader_program(app.opengl);
@@ -212,9 +209,8 @@ main(void)
   app.front_component = front_component;
   app.frame_component = frame_component;
 
-  struct buffer *vertex_buffer_data, *texture_data;
+  struct buffer *texture_data;
 
-  vertex_buffer_data = create_buffer(app.shm, sizeof(Vertex) * 8);
   texture_data =
       create_buffer(app.shm, 256 * 4, 256, 256, WL_SHM_FORMAT_ARGB8888);
 
@@ -222,9 +218,8 @@ main(void)
 
   size_t vertex_shader_len = strlen(vertex_shader);
   int vertex_shader_fd = get_shared_shader_fd(vertex_shader);
-  if (vertex_shader_fd == -1) {
-    return EXIT_FAILURE;
-  }
+
+  assert(vertex_shader_fd != -1);
 
   zgn_opengl_shader_program_set_vertex_shader(
       frame_shader, vertex_shader_fd, vertex_shader_len);
@@ -232,9 +227,8 @@ main(void)
       front_shader, vertex_shader_fd, vertex_shader_len);
 
   int fragment_shader_fd = get_shared_shader_fd(fragment_shader);
-  if (fragment_shader_fd == -1) {
-    return EXIT_FAILURE;
-  }
+  assert(fragment_shader_fd != -1);
+
   zgn_opengl_shader_program_set_fragment_shader(
       frame_shader, fragment_shader_fd, strlen(fragment_shader));
   zgn_opengl_shader_program_link(frame_shader);
@@ -252,10 +246,7 @@ main(void)
 
   int texture_fragment_shader_fd =
       get_shared_shader_fd(texture_fragment_shader);
-
-  if (texture_fragment_shader_fd == -1) {
-    return EXIT_FAILURE;
-  }
+  assert(texture_fragment_shader_fd != -1);
 
   zgn_opengl_shader_program_set_fragment_shader(front_shader,
       texture_fragment_shader_fd, strlen(texture_fragment_shader));
@@ -299,9 +290,8 @@ main(void)
   opengl_component_add_ushort_element_array_buffer(
       app.opengl, front_component, app.shm, front_indices, 6);
 
-  Vertex *vertices = (Vertex *)vertex_buffer_data->data;
-  memcpy(vertices, points, sizeof(Vertex) * 8);
-  zgn_opengl_vertex_buffer_attach(vertex_buffer, vertex_buffer_data->buffer);
+  zgn_opengl_vertex_buffer *vertex_buffer =
+      opengl_setup_vertex_buffer(app.opengl, app.shm, points, 8);
   zgn_opengl_component_attach_vertex_buffer(frame_component, vertex_buffer);
   zgn_opengl_component_attach_vertex_buffer(front_component, vertex_buffer);
   app.delta_theta = 0.;

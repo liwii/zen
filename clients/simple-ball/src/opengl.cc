@@ -1,3 +1,5 @@
+#include "opengl.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -77,4 +79,18 @@ opengl_component_add_ushort_element_array_buffer(zgn_opengl *opengl,
       ZGN_OPENGL_ELEMENT_ARRAY_INDICES_TYPE_UNSIGNED_SHORT);
 
   zgn_opengl_component_attach_element_array_buffer(component, element_array);
+}
+
+zgn_opengl_vertex_buffer *
+opengl_setup_vertex_buffer(
+    zgn_opengl *opengl, wl_shm *shm, Vertex *points, uint points_len)
+{
+  zgn_opengl_vertex_buffer *vertex_buffer =
+      zgn_opengl_create_vertex_buffer(opengl);
+  uint points_size = sizeof(Vertex) * points_len;
+  buffer *vertex_buffer_data = create_buffer(shm, points_size);
+  Vertex *vertices = (Vertex *)vertex_buffer_data->data;
+  memcpy(vertices, points, points_size);
+  zgn_opengl_vertex_buffer_attach(vertex_buffer, vertex_buffer_data->buffer);
+  return vertex_buffer;
 }
