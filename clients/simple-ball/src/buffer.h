@@ -9,9 +9,9 @@ struct buffer {
   struct wl_buffer *buffer;
 };
 
-buffer *create_buffer(struct app *app, off_t size);
+buffer *create_buffer(wl_shm *shm, off_t size);
 
-buffer *create_buffer(struct app *app, int32_t stride, int32_t height,
+buffer *create_buffer(wl_shm *shm, int32_t stride, int32_t height,
     int32_t width, enum wl_shm_format format);
 
 int create_shared_fd(off_t size);

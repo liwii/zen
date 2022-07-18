@@ -212,18 +212,11 @@ main(void)
   app.front_component = front_component;
   app.frame_component = frame_component;
 
-  struct zgn_opengl_element_array_buffer *frame_element_array,
-      *front_element_array;
-  frame_element_array = zgn_opengl_create_element_array_buffer(app.opengl);
-  front_element_array = zgn_opengl_create_element_array_buffer(app.opengl);
+  struct buffer *vertex_buffer_data, *texture_data;
 
-  struct buffer *vertex_buffer_data, *frame_element_array_data,
-      *front_element_array_data, *texture_data;
-
-  vertex_buffer_data = create_buffer(&app, sizeof(Vertex) * 8);
-  frame_element_array_data = create_buffer(&app, sizeof(u_short) * 24);
-  front_element_array_data = create_buffer(&app, sizeof(u_short) * 24);
-  texture_data = create_buffer(&app, 256 * 4, 256, 256, WL_SHM_FORMAT_ARGB8888);
+  vertex_buffer_data = create_buffer(app.shm, sizeof(Vertex) * 8);
+  texture_data =
+      create_buffer(app.shm, 256 * 4, 256, 256, WL_SHM_FORMAT_ARGB8888);
 
   app.texture_buffer = texture_data;
 
@@ -298,22 +291,13 @@ main(void)
 
   u_short frame_indices[24] = {
       0, 1, 2, 3, 4, 5, 6, 7, 0, 4, 1, 5, 2, 6, 3, 7, 0, 2, 1, 3, 4, 6, 5, 7};
-  u_short *frame_array_indices = (u_short *)frame_element_array_data->data;
-  memcpy(frame_array_indices, frame_indices, sizeof(frame_indices));
-  zgn_opengl_element_array_buffer_attach(frame_element_array,
-      frame_element_array_data->buffer,
-      ZGN_OPENGL_ELEMENT_ARRAY_INDICES_TYPE_UNSIGNED_SHORT);
-  zgn_opengl_component_attach_element_array_buffer(
-      frame_component, frame_element_array);
+
+  opengl_component_add_ushort_element_array_buffer(
+      app.opengl, frame_component, app.shm, frame_indices, 24);
 
   u_short front_indices[6] = {1, 7, 3, 1, 7, 5};
-  u_short *front_array_indices = (u_short *)front_element_array_data->data;
-  memcpy(front_array_indices, front_indices, sizeof(front_indices));
-  zgn_opengl_element_array_buffer_attach(front_element_array,
-      front_element_array_data->buffer,
-      ZGN_OPENGL_ELEMENT_ARRAY_INDICES_TYPE_UNSIGNED_SHORT);
-  zgn_opengl_component_attach_element_array_buffer(
-      front_component, front_element_array);
+  opengl_component_add_ushort_element_array_buffer(
+      app.opengl, front_component, app.shm, front_indices, 6);
 
   Vertex *vertices = (Vertex *)vertex_buffer_data->data;
   memcpy(vertices, points, sizeof(Vertex) * 8);

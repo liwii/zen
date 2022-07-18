@@ -29,7 +29,7 @@ create_shared_fd(off_t size)
 }
 
 buffer *
-create_buffer(struct app *app, off_t size)
+create_buffer(wl_shm *shm, off_t size)
 {
   buffer *buf = (buffer *)malloc(sizeof(buffer));
 
@@ -48,14 +48,14 @@ create_buffer(struct app *app, off_t size)
     return NULL;
   }
 
-  buf->pool = wl_shm_create_pool(app->shm, buf->fd, size);
+  buf->pool = wl_shm_create_pool(shm, buf->fd, size);
   buf->buffer = wl_shm_pool_create_buffer(buf->pool, 0, size, 1, size, 0);
 
   return buf;
 }
 
 buffer *
-create_buffer(struct app *app, int32_t stride, int32_t height, int32_t width,
+create_buffer(wl_shm *shm, int32_t stride, int32_t height, int32_t width,
     enum wl_shm_format format)
 {
   buffer *buf = (buffer *)malloc(sizeof(buffer));
@@ -76,7 +76,7 @@ create_buffer(struct app *app, int32_t stride, int32_t height, int32_t width,
     return NULL;
   }
 
-  buf->pool = wl_shm_create_pool(app->shm, buf->fd, size);
+  buf->pool = wl_shm_create_pool(shm, buf->fd, size);
   buf->buffer =
       wl_shm_pool_create_buffer(buf->pool, 0, width, height, stride, format);
 

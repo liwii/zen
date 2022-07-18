@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <wayland-client.h>
 #include <zigen-opengl-client-protocol.h>
 
 #include <glm/glm.hpp>
@@ -57,4 +58,23 @@ set_shader_uniform_variable(struct zgn_opengl_shader_program *shader,
   zgn_opengl_shader_program_set_uniform_float_vector(
       shader, location, 4, 1, &array);
   wl_array_release(&array);
+}
+void
+opengl_component_add_ushort_element_array_buffer(zgn_opengl *opengl,
+    zgn_opengl_component *component, wl_shm *shm, u_short *indices,
+    uint indices_len)
+{
+  zgn_opengl_element_array_buffer *element_array =
+      zgn_opengl_create_element_array_buffer(opengl);
+
+  uint indices_size = sizeof(ushort) * indices_len;
+  buffer *element_array_buffer_data = create_buffer(shm, indices_size);
+
+  u_short *array_indices = (u_short *)element_array_buffer_data->data;
+  memcpy(array_indices, indices, indices_size);
+  zgn_opengl_element_array_buffer_attach(element_array,
+      element_array_buffer_data->buffer,
+      ZGN_OPENGL_ELEMENT_ARRAY_INDICES_TYPE_UNSIGNED_SHORT);
+
+  zgn_opengl_component_attach_element_array_buffer(component, element_array);
 }
