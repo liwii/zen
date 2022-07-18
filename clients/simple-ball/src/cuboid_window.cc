@@ -10,9 +10,9 @@
 
 
 static void
-cuboid_window_configure(void *data, struct zgn_cuboid_window *zgn_cuboid_window,
-    uint32_t serial, struct wl_array *half_size_array,
-    struct wl_array *quaternion_array)
+cuboid_window_configure(void *data, zgn_cuboid_window *zgn_cuboid_window,
+    uint32_t serial, wl_array *half_size_array,
+    wl_array *quaternion_array)
 {
   (void)data;
   (void)half_size_array;
@@ -21,26 +21,26 @@ cuboid_window_configure(void *data, struct zgn_cuboid_window *zgn_cuboid_window,
 }
 
 static void
-cuboid_window_moved(void *data, struct zgn_cuboid_window *zgn_cuboid_window,
-    struct wl_array *face_direction_array)
+cuboid_window_moved(void *data, zgn_cuboid_window *zgn_cuboid_window,
+    wl_array *face_direction_array)
 {
   (void)data;
   (void)zgn_cuboid_window;
   (void)face_direction_array;
 }
 
-static const struct zgn_cuboid_window_listener cuboid_window_listener = {
+static const zgn_cuboid_window_listener cuboid_window_listener = {
     cuboid_window_configure,
     cuboid_window_moved,
 };
 
 void
-add_cuboid_window(struct app *app, float length)
+add_cuboid_window(app *app, float length)
 {
   glm::vec3 half_size(length * 1.8);
   app->quaternion = glm::quat();
 
-  struct wl_array half_size_array, quaternion_array;
+  wl_array half_size_array, quaternion_array;
 
   wl_array_init(&half_size_array);
   wl_array_init(&quaternion_array);
@@ -55,7 +55,7 @@ add_cuboid_window(struct app *app, float length)
       (float *)wl_array_add(&quaternion_array, quaternion_size);
   memcpy(quaternion_data, &app->quaternion, quaternion_size);
 
-  struct zgn_cuboid_window *cuboid_window = zgn_shell_get_cuboid_window(
+  zgn_cuboid_window *cuboid_window = zgn_shell_get_cuboid_window(
       app->shell, app->obj, &half_size_array, &quaternion_array);
 
   wl_array_release(&half_size_array);

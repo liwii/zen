@@ -1,2 +1,2 @@
 void
-add_cuboid_window(struct app *app, float length);
+add_cuboid_window(app *app, float length);

@@ -1,2 +1,2 @@
 void
-add_ray_listener(struct app *app);
+add_ray_listener(app *app);
