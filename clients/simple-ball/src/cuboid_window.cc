@@ -1,5 +1,3 @@
-#include "main.h"
-
 #include <string.h>
 #include <sys/mman.h>
 #include <zigen-shell-client-protocol.h>
@@ -8,11 +6,11 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
 
+#include "main.h"
 
 static void
 cuboid_window_configure(void *data, zgn_cuboid_window *zgn_cuboid_window,
-    uint32_t serial, wl_array *half_size_array,
-    wl_array *quaternion_array)
+    uint32_t serial, wl_array *half_size_array, wl_array *quaternion_array)
 {
   (void)data;
   (void)half_size_array;

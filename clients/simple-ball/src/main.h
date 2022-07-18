@@ -2,6 +2,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
+
 struct Vertex {
   glm::vec3 p;
   float u, v;
