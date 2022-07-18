@@ -35,9 +35,4 @@ struct app {
   struct epoll_event epoll_event;
   int epoll_fd;
 };
-
-struct ColorBGRA {
-  uint8_t b, g, r, a;
-};
-
 #endif  //  MAIN_H

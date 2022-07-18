@@ -11,6 +11,10 @@ struct Vertex {
   float u, v;
 };
 
+struct ColorBGRA {
+  uint8_t b, g, r, a;
+};
+
 int get_shared_shader_fd(const char *shader);
 
 void set_shader_uniform_variable(struct zgn_opengl_shader_program *shader,

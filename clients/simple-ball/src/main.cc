@@ -18,6 +18,7 @@
 
 #include "buffer.h"
 #include "cuboid_window.h"
+#include "obj.h"
 #include "opengl.h"
 #include "ray.h"
 
@@ -142,19 +143,8 @@ next_frame(struct app *app, uint32_t time)
     zgn_opengl_component_attach_shader_program(
         app->front_component, app->front_shader);
   }
-  struct ColorBGRA *pixel = (struct ColorBGRA *)app->texture_buffer->data;
-  glm::vec2 position = {1, 1};
-  for (int x = 0; x < 256; x++) {
-    for (int y = 0; y < 256; y++) {
-      int r2 = (position.x * UINT8_MAX - x) * (position.x * UINT8_MAX - x) +
-               (position.y * UINT8_MAX - y) * (position.y * UINT8_MAX - y);
-      pixel->a = r2 < 1024 ? 0 : UINT8_MAX;
-      pixel->r = x;
-      pixel->g = y;
-      pixel->b = (time / 10) % UINT8_MAX;
-      pixel++;
-    }
-  }
+
+  obj_update_texture_buffer_data(app->texture_buffer->data, time);
 
   zgn_opengl_texture_attach_2d(app->texture, app->texture_buffer->buffer);
   zgn_opengl_component_attach_texture(app->front_component, app->texture);
@@ -208,8 +198,8 @@ main(void)
 
   struct buffer *texture_data;
 
-  texture_data =
-      create_buffer(app.shm, 256 * 4, 256, 256, WL_SHM_FORMAT_ARGB8888);
+  texture_data = create_buffer(app.shm, OBJ_TEXTURE_WIDTH * 4,
+      OBJ_TEXTURE_HEIGHT, OBJ_TEXTURE_WIDTH, WL_SHM_FORMAT_ARGB8888);
 
   app.texture_buffer = texture_data;
 
@@ -260,22 +250,7 @@ main(void)
       ZGN_OPENGL_VERTEX_ATTRIBUTE_TYPE_FLOAT, false, sizeof(Vertex),
       offsetof(Vertex, u));
 
-  Vertex points[8];
-
-  float length = 0.2f;
-  int i = 0;
-  for (int x = -1; x < 2; x += 2) {
-    for (int y = -1; y < 2; y += 2) {
-      for (int z = -1; z < 2; z += 2) {
-        points[i].p.x = length * x;
-        points[i].p.y = length * y;
-        points[i].p.z = length * z;
-        points[i].u = x < 0 ? 0 : 1;
-        points[i].v = y < 0 ? 0 : 1;
-        i++;
-      }
-    }
-  }
+  Vertex *points = get_points();
 
   u_short frame_indices[24] = {
       0, 1, 2, 3, 4, 5, 6, 7, 0, 4, 1, 5, 2, 6, 3, 7, 0, 2, 1, 3, 4, 6, 5, 7};
@@ -294,7 +269,7 @@ main(void)
   app.delta_theta = 0.;
   app.delta_phi = 0.;
 
-  add_cuboid_window(&app, length);
+  add_cuboid_window(&app, 0.2);
 
   app.epoll_event.data.ptr = &app;
   app.epoll_event.events = EPOLLIN;
