@@ -58,6 +58,7 @@ struct app {
   struct zgn_opengl *opengl;
   struct zgn_shell *shell;
   struct zgn_virtual_object *obj;
+  struct zgn_virtual_object *ray_focus_obj;
   struct zgn_opengl_texture *texture;
   struct buffer *texture_buffer;
   struct zgn_opengl_component *front_component;
@@ -68,6 +69,9 @@ struct app {
   float delta_phi;
   glm::mat4 rotate;
   glm::quat quaternion;
+  struct zgn_seat *seat;
+  struct zgn_ray *ray;
+  bool stopped;
 };
 
 struct ColorBGRA {
@@ -82,6 +86,78 @@ struct buffer {
   struct wl_buffer *buffer;
 };
 
+static void
+ray_enter(void *data, struct zgn_ray *ray, uint32_t serial,
+    struct zgn_virtual_object *virtual_object, struct wl_array *origin,
+    struct wl_array *direction)
+{
+  struct app* app = (struct app *) data;
+  app->ray_focus_obj = virtual_object;
+  (void)ray;
+  (void)serial;
+  (void)origin;
+  (void)direction;
+}
+
+static void
+ray_leave(void *data, struct zgn_ray *ray, uint32_t serial,
+    struct zgn_virtual_object *virtual_object)
+{
+  struct app* app = (struct app *) data;
+  app->ray_focus_obj = NULL;
+  (void)ray;
+  (void)serial;
+  (void)virtual_object;
+}
+
+static void
+ray_motion(void *data, struct zgn_ray *ray, uint32_t time,
+    struct wl_array *origin, struct wl_array *direction)
+{
+  (void)data;
+  (void)ray;
+  (void)time;
+  (void)origin;
+  (void)direction;
+}
+
+static void
+ray_button(void *data, struct zgn_ray *ray, uint32_t serial, uint32_t time,
+    uint32_t button, uint32_t state)
+{
+  struct app* app = (struct app *) data;
+  if (app->ray_focus_obj == NULL) return;
+  if(state == ZGN_RAY_BUTTON_STATE_PRESSED) {
+    app->stopped = !app->stopped;
+  }
+  (void)ray;
+  (void)serial;
+  (void)time;
+  (void)button;
+  (void)state;
+}
+
+
+static const struct zgn_ray_listener ray_listener = {
+  ray_enter,
+  ray_leave,
+  ray_motion,
+  ray_button,
+};
+
+static void
+seat_capabilities(void *data, struct zgn_seat *seat, uint32_t capability)
+{
+  (void) capability;
+  struct app* app = (struct app*) data;
+  app->ray = zgn_seat_get_ray(seat);
+  zgn_ray_add_listener(app->ray, &ray_listener, app);
+  
+}
+
+static const struct zgn_seat_listener seat_listener = {
+    seat_capabilities,
+};
 
 static void
 global_registry(void *data, struct wl_registry *registry, uint32_t id,
@@ -91,6 +167,10 @@ global_registry(void *data, struct wl_registry *registry, uint32_t id,
   if (strcmp(interface, "wl_shm") == 0) {
     app->shm = (struct wl_shm *)wl_registry_bind(
         registry, id, &wl_shm_interface, version);
+  } else if (strcmp(interface, "zgn_seat") == 0) {
+    app->seat = (zgn_seat *)wl_registry_bind(
+        registry, id, &zgn_seat_interface, version);
+    zgn_seat_add_listener(app->seat, &seat_listener, app);
   } else if (strcmp(interface, "zgn_opengl") == 0) {
     app->opengl = (zgn_opengl *)wl_registry_bind(
         registry, id, &zgn_opengl_interface, version);
@@ -151,20 +231,20 @@ void set_shader_uniform_variable(struct zgn_opengl_shader_program *shader, const
 
 
 static void next_frame(struct app *app, uint32_t time) {
-  
-  app->delta_theta += (float)(rand() - RAND_MAX / 2) / (float)RAND_MAX;
-  app->delta_theta = app->delta_theta > 10    ? 10
-                 : app->delta_theta < -10 ? -10
-                                      : app->delta_theta;
-  app->delta_phi += (float)(rand() - RAND_MAX / 2) / (float)RAND_MAX;
-  app->delta_phi = app->delta_phi > 10 ? 10 : app->delta_phi < -10 ? -10 : app->delta_phi;
-
-  app->rotate = glm::rotate(app->rotate, app->delta_theta * 0.001f, glm::vec3(1.0f, 0.0, 0.0f));
-  app->rotate = glm::rotate(app->rotate, app->delta_phi * 0.001f, glm::vec3(0.0f, 1.0, 0.0f));
-  set_shader_uniform_variable(app->frame_shader, "rotate", glm::toMat4(app->quaternion) * app->rotate);
-  set_shader_uniform_variable(app->front_shader, "rotate", glm::toMat4(app->quaternion) * app->rotate);
-  zgn_opengl_component_attach_shader_program(app->frame_component, app->frame_shader);
-  zgn_opengl_component_attach_shader_program(app->front_component, app->front_shader);
+  if(!app->stopped) {
+    app->delta_theta += (float)(rand() - RAND_MAX / 2) / (float)RAND_MAX;
+    app->delta_theta = app->delta_theta > 10    ? 10
+                  : app->delta_theta < -10 ? -10
+                                        : app->delta_theta;
+    app->delta_phi += (float)(rand() - RAND_MAX / 2) / (float)RAND_MAX;
+    app->delta_phi = app->delta_phi > 10 ? 10 : app->delta_phi < -10 ? -10 : app->delta_phi;
+    app->rotate = glm::rotate(app->rotate, app->delta_theta * 0.001f, glm::vec3(1.0f, 0.0, 0.0f));
+    app->rotate = glm::rotate(app->rotate, app->delta_phi * 0.001f, glm::vec3(0.0f, 1.0, 0.0f));
+    set_shader_uniform_variable(app->frame_shader, "rotate", glm::toMat4(app->quaternion) * app->rotate);
+    set_shader_uniform_variable(app->front_shader, "rotate", glm::toMat4(app->quaternion) * app->rotate);
+    zgn_opengl_component_attach_shader_program(app->frame_component, app->frame_shader);
+    zgn_opengl_component_attach_shader_program(app->front_component, app->front_shader);
+  }
 
 
   (void) time;
