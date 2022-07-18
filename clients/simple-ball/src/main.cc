@@ -3,6 +3,7 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/mman.h>
+#include <sys/epoll.h>
 #include <unistd.h>
 #include <wayland-client.h>
 #include <zigen-client-protocol.h>
@@ -72,6 +73,8 @@ struct app {
   struct zgn_seat *seat;
   struct zgn_ray *ray;
   bool stopped;
+  struct epoll_event epoll_event;
+  int epoll_fd;
 };
 
 struct ColorBGRA {
@@ -542,18 +545,36 @@ main(void)
 
   zgn_cuboid_window_add_listener(cuboid_window, &cuboid_window_listener, cuboid_window);
 
+  app.epoll_event.data.ptr = &app;
+  app.epoll_event.events = EPOLLIN;
+  app.epoll_fd = epoll_create1(EPOLL_CLOEXEC);
+
   wl_display_roundtrip(app.display);
   next_frame(&app, 0.);
 
+  if(epoll_ctl(app.epoll_fd, EPOLL_CTL_ADD, wl_display_get_fd(app.display), &app.epoll_event) == -1) {
+    fprintf(stderr, "Failed to add wayland event fd to epoll fd\n");
+    return -1;
+  }
+  wl_display_flush(app.display);
+
   while(true) {
-    while(wl_display_prepare_read(app.display) != 0) {
-      if (errno != EAGAIN) return false;
+    struct epoll_event events[16];
+    int epoll_count = epoll_wait(app.epoll_fd, events, 16, -1);
+
+    for(int i = 0; i < epoll_count; i++) {
+      assert(events[i].data.ptr == &app);
+      while(wl_display_prepare_read(app.display) != 0) {
+        if (errno != EAGAIN) return false;
+        wl_display_dispatch_pending(app.display);
+      }
+      int ret = wl_display_flush(app.display);
+      if (ret == -1) return EXIT_FAILURE;
+      wl_display_read_events(app.display);
       wl_display_dispatch_pending(app.display);
+      ret = wl_display_flush(app.display);
+      if (ret == -1) return EXIT_FAILURE;
     }
-    int ret = wl_display_flush(app.display);
-    if (ret == -1) return EXIT_FAILURE;
-    wl_display_read_events(app.display);
-    wl_display_dispatch_pending(app.display);
   }
 
   return EXIT_SUCCESS;
