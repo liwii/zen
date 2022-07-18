@@ -142,8 +142,6 @@ next_frame(struct app *app, uint32_t time)
     zgn_opengl_component_attach_shader_program(
         app->front_component, app->front_shader);
   }
-
-  (void)time;
   struct ColorBGRA *pixel = (struct ColorBGRA *)app->texture_buffer->data;
   glm::vec2 position = {1, 1};
   for (int x = 0; x < 256; x++) {
@@ -153,7 +151,7 @@ next_frame(struct app *app, uint32_t time)
       pixel->a = r2 < 1024 ? 0 : UINT8_MAX;
       pixel->r = x;
       pixel->g = y;
-      pixel->b = UINT8_MAX;
+      pixel->b = (time / 10) % UINT8_MAX;
       pixel++;
     }
   }
@@ -161,7 +159,6 @@ next_frame(struct app *app, uint32_t time)
   zgn_opengl_texture_attach_2d(app->texture, app->texture_buffer->buffer);
   zgn_opengl_component_attach_texture(app->front_component, app->texture);
 
-  // front_component_->Attach(texture_);
   wl_callback *frame_callback = zgn_virtual_object_frame(app->obj);
   wl_callback_add_listener(frame_callback, &frame_callback_listener, app);
   zgn_virtual_object_commit(app->obj);
