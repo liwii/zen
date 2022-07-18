@@ -5,6 +5,8 @@ srcs_simple_ball = [
     'cuboid_window.h',
     'ray.cc',
     'ray.h',
+    'buffer.cc',
+    'buffer.h',
     zigen_protocol_c,
     zigen_client_protocol_h,
     zigen_shell_protocol_c,

@@ -37,11 +37,3 @@ struct app {
 struct ColorBGRA {
   uint8_t b, g, r, a;
 };
-
-struct buffer {
-  off_t size;
-  int fd;
-  void *data;
-  struct wl_shm_pool *pool;
-  struct wl_buffer *buffer;
-};
