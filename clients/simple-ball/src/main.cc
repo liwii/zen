@@ -252,18 +252,14 @@ main(void)
 
   Vertex *points = get_points();
 
-  u_short frame_indices[24] = {
-      0, 1, 2, 3, 4, 5, 6, 7, 0, 4, 1, 5, 2, 6, 3, 7, 0, 2, 1, 3, 4, 6, 5, 7};
+  opengl_component_add_ushort_element_array_buffer(app.opengl, frame_component,
+      app.shm, obj_frame_indices, OBJ_FRAME_INDICES_NUM);
 
-  opengl_component_add_ushort_element_array_buffer(
-      app.opengl, frame_component, app.shm, frame_indices, 24);
-
-  u_short front_indices[6] = {1, 7, 3, 1, 7, 5};
-  opengl_component_add_ushort_element_array_buffer(
-      app.opengl, front_component, app.shm, front_indices, 6);
+  opengl_component_add_ushort_element_array_buffer(app.opengl, front_component,
+      app.shm, obj_front_indices, OBJ_FRONT_INDICES_NUM);
 
   zgn_opengl_vertex_buffer *vertex_buffer =
-      opengl_setup_vertex_buffer(app.opengl, app.shm, points, 8);
+      opengl_setup_vertex_buffer(app.opengl, app.shm, points, OBJ_NUM_POINTS);
   zgn_opengl_component_attach_vertex_buffer(frame_component, vertex_buffer);
   zgn_opengl_component_attach_vertex_buffer(front_component, vertex_buffer);
   app.delta_theta = 0.;

@@ -63,7 +63,7 @@ set_shader_uniform_variable(struct zgn_opengl_shader_program *shader,
 }
 void
 opengl_component_add_ushort_element_array_buffer(zgn_opengl *opengl,
-    zgn_opengl_component *component, wl_shm *shm, u_short *indices,
+    zgn_opengl_component *component, wl_shm *shm, const u_short *indices,
     uint indices_len)
 {
   zgn_opengl_element_array_buffer *element_array =
