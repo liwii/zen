@@ -10,6 +10,38 @@
 
 #include <glm/glm.hpp>
 
+const char *vertex_shader =
+    "#version 410\n"
+    "uniform mat4 zMVP;\n"
+    "uniform mat4 rotate;\n"
+    "layout(location = 0) in vec4 position;\n"
+    "layout(location = 1) in vec2 v2UVcoordsIn;\n"
+    "out vec2 v2UVcoords;\n"
+    "void main()\n"
+    "{\n"
+    "  v2UVcoords = v2UVcoordsIn;\n"
+    "  gl_Position = zMVP * rotate * position;\n"
+    "}\n";
+
+const char *fragment_shader =
+    "#version 410 core\n"
+    "uniform vec4 color;\n"
+    "out vec4 outputColor;\n"
+    "void main()\n"
+    "{\n"
+    "  outputColor = color;\n"
+    "}\n";
+
+const char *texture_fragment_shader =
+    "#version 410 core\n"
+    "uniform sampler2D userTexture;\n"
+    "in vec2 v2UVcoords;\n"
+    "out vec4 outputColor;\n"
+    "void main()\n"
+    "{\n"
+    "  outputColor = texture(userTexture, v2UVcoords);\n"
+    "}\n";
+
 struct Vertex {
   glm::vec3 p;
   float u, v;
@@ -171,6 +203,38 @@ main(void)
   vertex_buffer_data = create_buffer(&app, sizeof(Vertex) * 8);
   frame_element_array_data = create_buffer(&app, sizeof(u_short) * 24);
   front_element_array_data = create_buffer(&app, sizeof(u_short) * 24);
+
+  size_t vertex_shader_len = strlen(vertex_shader);
+  int vertex_shader_fd = create_shared_fd(vertex_shader_len);
+  if(vertex_shader_fd == -1) {
+    return EXIT_FAILURE;
+  }
+
+  void *vertex_shader_data = mmap(NULL, vertex_shader_len, PROT_WRITE, MAP_SHARED, vertex_shader_fd, 0);
+  if(vertex_shader_data == MAP_FAILED) {
+    fprintf(stderr, "mmap failed\n");
+    return EXIT_FAILURE;
+  }
+  memcpy(vertex_shader_data, vertex_shader, vertex_shader_len);
+  munmap(vertex_shader_data, strlen(vertex_shader));
+  
+  zgn_opengl_shader_program_set_vertex_shader(frame_shader, vertex_shader_fd, vertex_shader_len);
+
+  size_t fragment_shader_len = strlen(fragment_shader);
+  int fragment_shader_fd = create_shared_fd(fragment_shader_len);
+  if(fragment_shader_fd == -1) {
+    return EXIT_FAILURE;
+  }
+
+  void *fragment_shader_data = mmap(NULL, fragment_shader_len, PROT_WRITE, MAP_SHARED, fragment_shader_fd, 0);
+  if(fragment_shader_data == MAP_FAILED) {
+    fprintf(stderr, "mmap failed\n");
+    return EXIT_FAILURE;
+  }
+  memcpy(fragment_shader_data, fragment_shader, fragment_shader_len);
+  munmap(fragment_shader_data, fragment_shader_len);
+  
+  zgn_opengl_shader_program_set_fragment_shader(frame_shader, fragment_shader_fd, fragment_shader_len);
 
   (void)vertex_buffer;
   (void)frame_component;
