@@ -1,6 +1,8 @@
 srcs_simple_ball = [
     'main.cc',
     'main.h',
+    'obj.cc',
+    'obj.h',
     zigen_protocol_c,
     zigen_client_protocol_h,
     zigen_shell_protocol_c,
