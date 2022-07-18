@@ -1,4 +1,11 @@
+#ifndef MAIN_H
+#define MAIN_H
+
 #include <sys/epoll.h>
+#include <wayland-client.h>
+#include <zigen-client-protocol.h>
+#include <zigen-opengl-client-protocol.h>
+#include <zigen-shell-client-protocol.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -37,3 +44,5 @@ struct app {
 struct ColorBGRA {
   uint8_t b, g, r, a;
 };
+
+#endif  //  MAIN_H

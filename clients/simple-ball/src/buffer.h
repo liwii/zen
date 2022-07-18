@@ -1,3 +1,6 @@
+#ifndef BUFFER_H
+#define BUFFER_H
+
 #include <sys/types.h>
 #include <wayland-client.h>
 
@@ -15,3 +18,5 @@ buffer *create_buffer(wl_shm *shm, int32_t stride, int32_t height,
     int32_t width, enum wl_shm_format format);
 
 int create_shared_fd(off_t size);
+
+#endif  //  BUFFER_H
