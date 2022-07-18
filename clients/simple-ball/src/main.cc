@@ -2,11 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <wayland-client.h>
+#include <zigen-client-protocol.h>
+#include <zigen-opengl-client-protocol.h>
 
 struct app {
   struct wl_display *display;
   struct wl_registry *registry;
   struct wl_shm *shm;
+  struct zgn_compositor *compositor;
 };
 
 static void
@@ -17,6 +20,9 @@ global_registry(void *data, struct wl_registry *registry, uint32_t id,
   if (strcmp(interface, "wl_shm") == 0) {
     app->shm = (struct wl_shm *)wl_registry_bind(
         registry, id, &wl_shm_interface, version);
+  } else if (strcmp(interface, "zgn_compositor") == 0) {
+    app->compositor = (struct zgn_compositor *)wl_registry_bind(
+        registry, id, &zgn_compositor_interface, version);
   }
 }
 

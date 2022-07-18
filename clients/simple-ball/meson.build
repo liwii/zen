@@ -7,5 +7,10 @@ project(
 )
 
 wayland_client_dep = dependency('wayland-client')
+wayland_scanner_dep = dependency('wayland-scanner')
+zgn_protocol_dep = dependency('zigen-protocols')
 
+pkgconfig = import('pkgconfig')
+
+subdir('protocols')
 subdir('src')
