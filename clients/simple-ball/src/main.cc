@@ -182,6 +182,24 @@ void set_shader_uniform_variable(struct zgn_opengl_shader_program *shader, const
   wl_array_release(&array);
 }
 
+static void cuboid_window_configure(void *data, struct zgn_cuboid_window *zgn_cuboid_window, uint32_t serial, struct wl_array *half_size_array, struct wl_array *quaternion_array) {
+  (void) data;
+  (void) half_size_array;
+  (void) quaternion_array;
+  zgn_cuboid_window_ack_configure(zgn_cuboid_window, serial);
+}
+
+static void cuboid_window_moved(void *data, struct zgn_cuboid_window *zgn_cuboid_window, struct wl_array *face_direction_array) {
+  (void) data;
+  (void) zgn_cuboid_window;
+  (void) face_direction_array;
+}
+
+static const struct zgn_cuboid_window_listener cuboid_window_listener = {
+  cuboid_window_configure,
+  cuboid_window_moved,
+};
+
 
 
 int
@@ -319,6 +337,11 @@ main(void)
   memcpy(quaternion_data, &quaternion, quaternion_size);
 
   struct zgn_cuboid_window* cuboid_window = zgn_shell_get_cuboid_window(app.shell, virtual_object, &half_size_array, &quaternion_array);
+
+  wl_array_release(&half_size_array);
+
+  zgn_cuboid_window_add_listener(cuboid_window, &cuboid_window_listener, cuboid_window);
+
 
 
   (void)cuboid_window;
