@@ -7,8 +7,10 @@
 #include <wayland-client.h>
 #include <zigen-client-protocol.h>
 #include <zigen-opengl-client-protocol.h>
+#include <zigen-shell-client-protocol.h>
 
 #include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 const char *vertex_shader =
     "#version 410\n"
@@ -53,6 +55,7 @@ struct app {
   struct wl_shm *shm;
   struct zgn_compositor *compositor;
   struct zgn_opengl *opengl;
+  struct zgn_shell *shell;
 };
 
 
@@ -70,6 +73,9 @@ global_registry(void *data, struct wl_registry *registry, uint32_t id,
   } else if (strcmp(interface, "zgn_compositor") == 0) {
     app->compositor = (struct zgn_compositor *)wl_registry_bind(
         registry, id, &zgn_compositor_interface, version);
+  } else if (strcmp(interface, "zgn_shell") == 0) {
+    app->shell = (struct zgn_shell *)wl_registry_bind(
+        registry, id, &zgn_shell_interface, version);
   }
 }
 
@@ -156,6 +162,27 @@ static struct buffer* create_buffer(app *app, off_t size) {
   return buf;
 }
 
+void set_shader_uniform_variable(struct zgn_opengl_shader_program *shader, const char *location, glm::mat4 mat) {
+  struct wl_array array;
+  wl_array_init(&array);
+  size_t size = sizeof(float) * 16;
+  float *data = (float *)wl_array_add(&array, size);
+  memcpy(data, &mat, size);
+  zgn_opengl_shader_program_set_uniform_float_matrix(shader, location, 4, 4, false, 1, &array);
+  wl_array_release(&array);
+}
+
+void set_shader_uniform_variable(struct zgn_opengl_shader_program *shader, const char *location, glm::vec4 vec) {
+  struct wl_array array;
+  wl_array_init(&array);
+  size_t size = sizeof(float) * 4;
+  float *data = (float *)wl_array_add(&array, size);
+  memcpy(data, &vec, size);
+  zgn_opengl_shader_program_set_uniform_float_vector(shader, location, 4, 1, &array);
+  wl_array_release(&array);
+}
+
+
 
 int
 main(void)
@@ -235,16 +262,69 @@ main(void)
   munmap(fragment_shader_data, fragment_shader_len);
   
   zgn_opengl_shader_program_set_fragment_shader(frame_shader, fragment_shader_fd, fragment_shader_len);
+  zgn_opengl_shader_program_link(frame_shader);
+  set_shader_uniform_variable(frame_shader, "color", glm::vec4(0.0f, 1.0f, 1.0f, 1.0f));
+  glm::mat4 rotate(1.0f);
+  set_shader_uniform_variable(frame_shader, "rotate", rotate);
+  zgn_opengl_component_attach_shader_program(frame_component, frame_shader);
+  zgn_opengl_component_set_count(frame_component, 24);
+  zgn_opengl_component_set_topology(frame_component, ZGN_OPENGL_TOPOLOGY_LINES);
+  zgn_opengl_component_add_vertex_attribute(frame_component, 0, 3, ZGN_OPENGL_VERTEX_ATTRIBUTE_TYPE_FLOAT, false, sizeof(Vertex), offsetof(Vertex, p));
 
-  (void)vertex_buffer;
-  (void)frame_component;
+  Vertex points[8];
+
+  float length = 0.2f;
+  int i = 0;
+  for (int x = -1; x < 2; x += 2) {
+    for (int y = -1; y < 2; y += 2) {
+      for (int z = -1; z < 2; z += 2) {
+        points[i].p.x = length * x;
+        points[i].p.y = length * y;
+        points[i].p.z = length * z;
+        points[i].u = x < 0 ? 0 : 1;
+        points[i].v = y < 0 ? 0 : 1;
+        i++;
+      }
+    }
+  }
+
+  u_short frame_indices[24] = {
+      0, 1, 2, 3, 4, 5, 6, 7, 0, 4, 1, 5, 2, 6, 3, 7, 0, 2, 1, 3, 4, 6, 5, 7};
+  u_short *indices = (u_short *)frame_element_array_data->data;
+  memcpy(indices, frame_indices, sizeof(frame_indices));
+  zgn_opengl_element_array_buffer_attach(frame_element_array, frame_element_array_data->buffer, ZGN_OPENGL_ELEMENT_ARRAY_INDICES_TYPE_UNSIGNED_SHORT);
+  zgn_opengl_component_attach_element_array_buffer(frame_component, frame_element_array);
+
+  Vertex *vertices = (Vertex *)vertex_buffer_data->data;
+  memcpy(vertices, points, sizeof(Vertex) * 8);
+  zgn_opengl_vertex_buffer_attach(vertex_buffer, vertex_buffer_data->buffer);
+  zgn_opengl_component_attach_vertex_buffer(frame_component, vertex_buffer);
+
+  glm::vec3 half_size(length * 1.8);
+  glm::quat quaternion;
+  quaternion = glm::quat();
+
+
+  struct wl_array half_size_array, quaternion_array;
+
+  wl_array_init(&half_size_array);
+  wl_array_init(&quaternion_array);
+
+  size_t half_size_size = sizeof(glm::vec3);
+  float *half_size_data = (float *)wl_array_add(&half_size_array, half_size_size);
+  memcpy(half_size_data, &half_size, half_size_size);
+
+  size_t quaternion_size = sizeof(glm::quat);
+  float *quaternion_data = (float *)wl_array_add(&quaternion_array, quaternion_size);
+  memcpy(quaternion_data, &quaternion, quaternion_size);
+
+  struct zgn_cuboid_window* cuboid_window = zgn_shell_get_cuboid_window(app.shell, virtual_object, &half_size_array, &quaternion_array);
+
+
+  (void)cuboid_window;
   (void)front_component;
-  (void)frame_element_array;
   (void)front_element_array;
-  (void)vertex_buffer_data;
-  (void)frame_element_array_data;
   (void)front_element_array_data;
-  (void)frame_shader;
   (void)front_shader;
   (void)texture;
   
