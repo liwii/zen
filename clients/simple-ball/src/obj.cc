@@ -26,20 +26,10 @@ obj_update_texture_buffer_data(void *texture_buffer_data, uint32_t time)
 Vertex *
 get_points()
 {
-  Vertex *points = (Vertex *)malloc(sizeof(Vertex) * OBJ_NUM_POINTS);
-  float length = 0.2f;
-  int i = 0;
-  for (int x = -1; x < 2; x += 2) {
-    for (int y = -1; y < 2; y += 2) {
-      for (int z = -1; z < 2; z += 2) {
-        points[i].p.x = length * x;
-        points[i].p.y = length * y;
-        points[i].p.z = length * z;
-        points[i].u = x < 0 ? 0 : 1;
-        points[i].v = y < 0 ? 0 : 1;
-        i++;
-      }
-    }
-  }
+  Vertex *points = (Vertex *)malloc(sizeof(Vertex) * 4);
+  points[0] = Vertex{glm::vec3(0, 0, 0), glm::vec2(0, 0), glm::vec3(0, 0, 1)};
+  points[1] = Vertex{glm::vec3(1, 0, 0), glm::vec2(1, 0), glm::vec3(0, 0, 1)};
+  points[2] = Vertex{glm::vec3(0, 1, 0), glm::vec2(0, 1), glm::vec3(0, 0, 1)};
+  points[3] = Vertex{glm::vec3(1, 1, 0), glm::vec2(1, 1), glm::vec3(0, 0, 1)};
   return points;
 }

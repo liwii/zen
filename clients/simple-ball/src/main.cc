@@ -26,13 +26,14 @@ const char *vertex_shader =
     "#version 410\n"
     "uniform mat4 zMVP;\n"
     "uniform mat4 rotate;\n"
-    "layout(location = 0) in vec4 position;\n"
+    "layout(location = 0) in vec3 position;\n"
     "layout(location = 1) in vec2 v2UVcoordsIn;\n"
+    "layout(location = 2) in vec3 norm;\n"
     "out vec2 v2UVcoords;\n"
     "void main()\n"
     "{\n"
     "  v2UVcoords = v2UVcoordsIn;\n"
-    "  gl_Position = zMVP * rotate * position;\n"
+    "  gl_Position = zMVP * rotate * vec4(position, 1);\n"
     "}\n";
 
 const char *fragment_shader =
@@ -42,16 +43,6 @@ const char *fragment_shader =
     "void main()\n"
     "{\n"
     "  outputColor = color;\n"
-    "}\n";
-
-const char *texture_fragment_shader =
-    "#version 410 core\n"
-    "uniform sampler2D userTexture;\n"
-    "in vec2 v2UVcoords;\n"
-    "out vec4 outputColor;\n"
-    "void main()\n"
-    "{\n"
-    "  outputColor = texture(userTexture, v2UVcoords);\n"
     "}\n";
 
 static void
@@ -121,6 +112,7 @@ static const struct wl_callback_listener frame_callback_listener = {
 static void
 next_frame(struct app *app, uint32_t time)
 {
+  (void)time;
   if (!app->stopped) {
     app->delta_theta += (float)(rand() - RAND_MAX / 2) / (float)RAND_MAX;
     app->delta_theta = app->delta_theta > 10    ? 10
@@ -134,20 +126,10 @@ next_frame(struct app *app, uint32_t time)
         app->rotate, app->delta_theta * 0.001f, glm::vec3(1.0f, 0.0, 0.0f));
     app->rotate = glm::rotate(
         app->rotate, app->delta_phi * 0.001f, glm::vec3(0.0f, 1.0, 0.0f));
-    set_shader_uniform_variable(app->frame_shader, "rotate",
-        glm::toMat4(app->quaternion) * app->rotate);
-    set_shader_uniform_variable(app->front_shader, "rotate",
-        glm::toMat4(app->quaternion) * app->rotate);
-    zgn_opengl_component_attach_shader_program(
-        app->frame_component, app->frame_shader);
-    zgn_opengl_component_attach_shader_program(
-        app->front_component, app->front_shader);
+    set_shader_uniform_variable(
+        app->shader, "rotate", glm::toMat4(app->quaternion) * app->rotate);
+    zgn_opengl_component_attach_shader_program(app->component, app->shader);
   }
-
-  obj_update_texture_buffer_data(app->texture_buffer->data, time);
-
-  zgn_opengl_texture_attach_2d(app->texture, app->texture_buffer->buffer);
-  zgn_opengl_component_attach_texture(app->front_component, app->texture);
 
   wl_callback *frame_callback = zgn_virtual_object_frame(app->obj);
   wl_callback_add_listener(frame_callback, &frame_callback_listener, app);
@@ -177,31 +159,13 @@ main(void)
   virtual_object = zgn_compositor_create_virtual_object(app.compositor);
   app.obj = virtual_object;
 
-  struct zgn_opengl_shader_program *frame_shader, *front_shader;
-  frame_shader = zgn_opengl_create_shader_program(app.opengl);
-  front_shader = zgn_opengl_create_shader_program(app.opengl);
-  app.frame_shader = frame_shader;
-  app.front_shader = front_shader;
+  struct zgn_opengl_shader_program *shader;
+  shader = zgn_opengl_create_shader_program(app.opengl);
+  app.shader = shader;
 
-  struct zgn_opengl_texture *texture;
-  texture = zgn_opengl_create_texture(app.opengl);
-
-  app.texture = texture;
-
-  struct zgn_opengl_component *frame_component, *front_component;
-  frame_component =
-      zgn_opengl_create_opengl_component(app.opengl, virtual_object);
-  front_component =
-      zgn_opengl_create_opengl_component(app.opengl, virtual_object);
-  app.front_component = front_component;
-  app.frame_component = frame_component;
-
-  struct buffer *texture_data;
-
-  texture_data = create_buffer(app.shm, OBJ_TEXTURE_WIDTH * 4,
-      OBJ_TEXTURE_HEIGHT, OBJ_TEXTURE_WIDTH, WL_SHM_FORMAT_ARGB8888);
-
-  app.texture_buffer = texture_data;
+  struct zgn_opengl_component *component;
+  component = zgn_opengl_create_opengl_component(app.opengl, virtual_object);
+  app.component = component;
 
   size_t vertex_shader_len = strlen(vertex_shader);
   int vertex_shader_fd = get_shared_shader_fd(vertex_shader);
@@ -209,63 +173,44 @@ main(void)
   assert(vertex_shader_fd != -1);
 
   zgn_opengl_shader_program_set_vertex_shader(
-      frame_shader, vertex_shader_fd, vertex_shader_len);
-  zgn_opengl_shader_program_set_vertex_shader(
-      front_shader, vertex_shader_fd, vertex_shader_len);
+      shader, vertex_shader_fd, vertex_shader_len);
 
   int fragment_shader_fd = get_shared_shader_fd(fragment_shader);
   assert(fragment_shader_fd != -1);
 
   zgn_opengl_shader_program_set_fragment_shader(
-      frame_shader, fragment_shader_fd, strlen(fragment_shader));
-  zgn_opengl_shader_program_link(frame_shader);
+      shader, fragment_shader_fd, strlen(fragment_shader));
+  zgn_opengl_shader_program_link(shader);
   set_shader_uniform_variable(
-      frame_shader, "color", glm::vec4(0.0f, 1.0f, 1.0f, 1.0f));
+      shader, "color", glm::vec4(0.0f, 1.0f, 1.0f, 1.0f));
   glm::mat4 rotate(1.0f);
   app.rotate = rotate;
-  set_shader_uniform_variable(frame_shader, "rotate", app.rotate);
-  zgn_opengl_component_attach_shader_program(frame_component, frame_shader);
-  zgn_opengl_component_set_count(frame_component, 24);
-  zgn_opengl_component_set_topology(frame_component, ZGN_OPENGL_TOPOLOGY_LINES);
-  zgn_opengl_component_add_vertex_attribute(frame_component, 0, 3,
+  set_shader_uniform_variable(shader, "rotate", app.rotate);
+  zgn_opengl_component_attach_shader_program(component, shader);
+  zgn_opengl_component_set_count(component, 24);
+  zgn_opengl_component_set_topology(component, ZGN_OPENGL_TOPOLOGY_TRIANGLES);
+  zgn_opengl_component_add_vertex_attribute(component, 0, 3,
       ZGN_OPENGL_VERTEX_ATTRIBUTE_TYPE_FLOAT, false, sizeof(Vertex),
       offsetof(Vertex, p));
-
-  int texture_fragment_shader_fd =
-      get_shared_shader_fd(texture_fragment_shader);
-  assert(texture_fragment_shader_fd != -1);
-
-  zgn_opengl_shader_program_set_fragment_shader(front_shader,
-      texture_fragment_shader_fd, strlen(texture_fragment_shader));
-  zgn_opengl_shader_program_link(front_shader);
-  set_shader_uniform_variable(front_shader, "rotate", app.rotate);
-  zgn_opengl_component_attach_shader_program(front_component, front_shader);
-  zgn_opengl_component_set_count(front_component, 6);
-  zgn_opengl_component_set_topology(
-      front_component, ZGN_OPENGL_TOPOLOGY_TRIANGLES);
-  zgn_opengl_component_add_vertex_attribute(front_component, 0, 3,
+  zgn_opengl_component_add_vertex_attribute(component, 1, 2,
       ZGN_OPENGL_VERTEX_ATTRIBUTE_TYPE_FLOAT, false, sizeof(Vertex),
-      offsetof(Vertex, p));
-  zgn_opengl_component_add_vertex_attribute(front_component, 1, 2,
+      offsetof(Vertex, uv));
+  zgn_opengl_component_add_vertex_attribute(component, 2, 3,
       ZGN_OPENGL_VERTEX_ATTRIBUTE_TYPE_FLOAT, false, sizeof(Vertex),
-      offsetof(Vertex, u));
+      offsetof(Vertex, norm));
 
   Vertex *points = get_points();
 
-  opengl_component_add_ushort_element_array_buffer(app.opengl, frame_component,
-      app.shm, obj_frame_indices, OBJ_FRAME_INDICES_NUM);
-
-  opengl_component_add_ushort_element_array_buffer(app.opengl, front_component,
-      app.shm, obj_front_indices, OBJ_FRONT_INDICES_NUM);
+  opengl_component_add_ushort_element_array_buffer(
+      app.opengl, component, app.shm, obj_frame_indices, OBJ_FRAME_INDICES_NUM);
 
   zgn_opengl_vertex_buffer *vertex_buffer =
       opengl_setup_vertex_buffer(app.opengl, app.shm, points, OBJ_NUM_POINTS);
-  zgn_opengl_component_attach_vertex_buffer(frame_component, vertex_buffer);
-  zgn_opengl_component_attach_vertex_buffer(front_component, vertex_buffer);
+  zgn_opengl_component_attach_vertex_buffer(component, vertex_buffer);
   app.delta_theta = 0.;
   app.delta_phi = 0.;
 
-  add_cuboid_window(&app, 0.2);
+  add_cuboid_window(&app, 1.0);
 
   app.epoll_event.data.ptr = &app;
   app.epoll_event.events = EPOLLIN;

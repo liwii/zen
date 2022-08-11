@@ -19,12 +19,8 @@ struct app {
   struct zgn_shell *shell;
   struct zgn_virtual_object *obj;
   struct zgn_virtual_object *ray_focus_obj;
-  struct zgn_opengl_texture *texture;
-  struct buffer *texture_buffer;
-  struct zgn_opengl_component *front_component;
-  struct zgn_opengl_component *frame_component;
-  struct zgn_opengl_shader_program *front_shader;
-  struct zgn_opengl_shader_program *frame_shader;
+  struct zgn_opengl_component *component;
+  struct zgn_opengl_shader_program *shader;
   float delta_theta;
   float delta_phi;
   glm::mat4 rotate;

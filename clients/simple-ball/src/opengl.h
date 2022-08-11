@@ -8,7 +8,8 @@
 
 struct Vertex {
   glm::vec3 p;
-  float u, v;
+  glm::vec2 uv;
+  glm::vec3 norm;
 };
 
 struct ColorBGRA {
