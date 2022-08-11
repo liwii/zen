@@ -10,6 +10,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+#include "obj.h"
+
 struct app {
   struct wl_display *display;
   struct wl_registry *registry;
@@ -21,13 +23,9 @@ struct app {
   struct zgn_virtual_object *ray_focus_obj;
   struct zgn_opengl_texture *texture;
   struct buffer *texture_buffer;
-  struct zgn_opengl_component *front_component;
-  struct zgn_opengl_component *frame_component;
-  struct zgn_opengl_shader_program *front_shader;
-  struct zgn_opengl_shader_program *frame_shader;
-  float delta_theta;
-  float delta_phi;
-  glm::mat4 rotate;
+  struct zgn_opengl_component *component;
+  struct zgn_opengl_shader_program *shader;
+  Env *e;
   glm::quat quaternion;
   struct zgn_seat *seat;
   struct zgn_ray *ray;
