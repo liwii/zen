@@ -200,9 +200,10 @@ main(void)
       offsetof(Vertex, norm));
 
   Vertex *points = get_points();
+  u_short *indices = vertex_indices();
 
   opengl_component_add_ushort_element_array_buffer(
-      app.opengl, component, app.shm, obj_frame_indices, OBJ_FRAME_INDICES_NUM);
+      app.opengl, component, app.shm, indices, OBJ_NUM_COMPONENTS);
 
   zgn_opengl_vertex_buffer *vertex_buffer =
       opengl_setup_vertex_buffer(app.opengl, app.shm, points, OBJ_NUM_POINTS);

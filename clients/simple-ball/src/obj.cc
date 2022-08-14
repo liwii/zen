@@ -23,13 +23,59 @@ obj_update_texture_buffer_data(void *texture_buffer_data, uint32_t time)
   }
 }
 
+void
+add_point(Vertex *v, int i, int j)
+{
+  float theta = glm::radians(360.0f / OBJ_NUM_POINTS_R * j);
+  float psi = glm::radians(360.0f / OBJ_NUM_POINTS_R * i);
+
+  (v->p).x = glm::sin(theta) * glm::cos(psi);
+  (v->p).y = glm::cos(theta);
+  (v->p).z = glm::sin(theta) * glm::sin(psi);
+
+  (v->uv).x = 1.0f - 1.0f / OBJ_NUM_POINTS_R * i;
+  (v->uv).y = 1.0f - 1.0f / (OBJ_NUM_POINTS_R / 2) * j;
+
+  (v->norm).x = glm::sin(theta) * glm::cos(psi);
+  (v->norm).y = glm::cos(theta);
+  (v->norm).z = glm::sin(theta) * glm::sin(psi);
+}
+
+int
+idx(int i, int j)
+{
+  return j * OBJ_NUM_POINTS_R + i;
+}
+
+u_short *
+vertex_indices()
+{
+  u_short *indices = (u_short *)malloc(sizeof(u_short) * OBJ_NUM_COMPONENTS);
+  for (int i = 0; i < OBJ_NUM_POINTS_R; i++) {
+    for (int j = 0; j < OBJ_NUM_POINTS_R / 2 - 1; j++) {
+      // draw two triangles
+      int base = (i * (OBJ_NUM_POINTS_R / 2 - 1) + j) * 6;
+      indices[base] = (u_short)idx(i + 1, j);
+      indices[base + 1] = (u_short)idx(i, j + 1);
+      indices[base + 2] = (u_short)idx(i + 1, j + 1);
+      indices[base + 3] = (u_short)idx(i + 1, j + 1);
+      indices[base + 4] = (u_short)idx(i, j + 1);
+      indices[base + 5] = (u_short)idx(i, j + 2);
+    }
+  }
+
+  return indices;
+}
+
 Vertex *
 get_points()
 {
-  Vertex *points = (Vertex *)malloc(sizeof(Vertex) * 4);
-  points[0] = Vertex{glm::vec3(0, 0, 0), glm::vec2(0, 0), glm::vec3(0, 0, 1)};
-  points[1] = Vertex{glm::vec3(1, 0, 0), glm::vec2(1, 0), glm::vec3(0, 0, 1)};
-  points[2] = Vertex{glm::vec3(0, 1, 0), glm::vec2(0, 1), glm::vec3(0, 0, 1)};
-  points[3] = Vertex{glm::vec3(1, 1, 0), glm::vec2(1, 1), glm::vec3(0, 0, 1)};
+  Vertex *points = (Vertex *)malloc(
+      sizeof(Vertex) * OBJ_NUM_POINTS_R * (OBJ_NUM_POINTS_R / 2 + 1));
+  for (int i = 0; i < OBJ_NUM_POINTS_R; ++i) {
+    for (int j = 0; j <= (OBJ_NUM_POINTS_R / 2); ++j) {
+      add_point(&points[idx(i, j)], i, j);
+    }
+  }
   return points;
 }
