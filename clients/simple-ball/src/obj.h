@@ -5,23 +5,90 @@
 
 #include "opengl.h"
 
-const int OBJ_FRAME_INDICES_NUM = 6;
-const int OBJ_FRONT_INDICES_NUM = 6;
+const char *const vertex_shader =
+    "#version 450 core\n"
+    "\n"
+    "layout(location = 0) in vec3 vertexPosition_modelspace;\n"
+    "layout(location = 1) in vec2 vertexUV;\n"
+    "layout(location = 2) in vec3 vertexNorm;\n"
+    "\n"
+    "out vec2 UV;\n"
+    "out vec3 norm;\n"
+    "out vec3 fragPos;\n"
+    "\n"
+    "uniform mat4 Model;\n"
+    "uniform mat4 View;\n"
+    "uniform mat4 Projection;\n"
+    "\n"
+    "void main() {\n"
+    "    gl_Position = Projection * View * Model * "
+    "vec4(vertexPosition_modelspace, 1);\n"
+    "\n"
+    "    UV = vertexUV;\n"
+    "    norm = mat3(transpose(inverse(Model))) * vertexNorm;\n"
+    "    fragPos = vec3(Model * vec4(vertexPosition_modelspace, 1.0));\n"
+    "}\n";
 
-const u_short obj_frame_indices[6] = {1, 7, 3, 1, 7, 5};
+const char *const fragment_shader =
+    "#version 450 core\n"
+    "\n"
+    "in vec2 UV;\n"
+    "in vec3 norm;\n"
+    "in vec3 fragPos;\n"
+    "\n"
+    "out vec3 color;\n"
+    "\n"
+    "uniform vec3 LightPos;\n"
+    "uniform vec3 CameraPos;\n"
+    //"uniform sampler2D myTextureSampler;\n"
+    "\n"
+    "void main() {\n"
+    "    vec3 n = normalize(norm);\n"
+    "    vec3 lightDir = normalize(LightPos - fragPos);\n"
+    "    vec3 lightColor = vec3(1.0, 0.8, 0.8);\n"
+    "    float diff = max(dot(norm, lightDir), 0.0);\n"
+    "    vec3 diffuse = diff * lightColor * 1.0;\n"
+    "\n"
+    "    vec3 viewDir = normalize(CameraPos - fragPos);\n"
+    "    vec3 reflectDir = reflect(-lightDir, norm);\n"
+    "\n"
+    "    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);\n"
+    "    vec3 specular = 0.3 * spec * lightColor;\n"
+    "\n"
+    //"    vec3 objectColor = texture(myTextureSampler, UV).rgb;\n"
+    "    float ambient = 0.2;\n"
+    "    color = (ambient + diffuse + specular) * lightColor;\n"
+    //" * texture(myTextureSampler, UV).rgb;\n"
+    "}\n"
+    "\n";
 
-const u_short obj_front_indices[6] = {0, 1, 2, 2, 1, 3};
-
-const int OBJ_TEXTURE_WIDTH = 256;
-const int OBJ_TEXTURE_HEIGHT = 256;
 const int OBJ_NUM_POINTS_R = 100;
 const int OBJ_NUM_POINTS = OBJ_NUM_POINTS_R * (OBJ_NUM_POINTS_R / 2 + 1);
 const int OBJ_NUM_COMPONENTS =
     6 * OBJ_NUM_POINTS_R * (OBJ_NUM_POINTS_R / 2 - 1);
 
+struct Vertex {
+  glm::vec3 p;
+  glm::vec2 uv;
+  glm::vec3 norm;
+};
+
+struct Env {
+  glm::mat4 projection;
+  glm::mat4 view;
+  glm::mat4 model;
+  glm::vec3 camera;
+  glm::vec3 light;
+};
+
 Vertex *get_points();
 u_short *vertex_indices();
 
-void obj_update_texture_buffer_data(void *texture_buffer_data, uint32_t time);
+Env *setup_env();
 
+void update_env(Env *e);
+void set_obj_uniform_variables(zgn_opengl_shader_program *shader, Env *e);
+
+zgn_opengl_vertex_buffer *opengl_setup_vertex_buffer(
+    zgn_opengl *opengl, wl_shm *shm, Vertex *points, uint points_len);
 #endif  //  OBJ_H

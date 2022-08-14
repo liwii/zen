@@ -1,27 +1,12 @@
 #include "obj.h"
 
-#include "opengl.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/rotate_vector.hpp>
 
-void
-obj_update_texture_buffer_data(void *texture_buffer_data, uint32_t time)
-{
-  struct ColorBGRA *pixel = (struct ColorBGRA *)texture_buffer_data;
-  for (int x = 0; x < OBJ_TEXTURE_WIDTH; x++) {
-    for (int y = 0; y < OBJ_TEXTURE_HEIGHT; y++) {
-      // The distance from origin  * 2
-      int r2 = x * x + y * y;
-      int opacity_distance_square =
-          (OBJ_TEXTURE_WIDTH * OBJ_TEXTURE_WIDTH +
-              OBJ_TEXTURE_HEIGHT * OBJ_TEXTURE_HEIGHT) /
-          4;
-      pixel->a = r2 < opacity_distance_square ? 0 : UINT8_MAX;
-      pixel->r = x;
-      pixel->g = y;
-      pixel->b = (time / 10) % UINT8_MAX;
-      pixel++;
-    }
-  }
-}
+#include "buffer.h"
+#include "opengl.h"
+#include "string.h"
 
 void
 add_point(Vertex *v, int i, int j)
@@ -79,3 +64,53 @@ get_points()
   }
   return points;
 }
+
+Env *
+setup_env()
+{
+  Env *e = (Env *)malloc(sizeof(Env));
+  e->projection =
+      glm::perspective(glm::radians(45.0f), 4.0f / 3.0f, 0.1f, 100.0f);
+  e->camera = glm::vec3(4, 3, 3);
+  e->view = glm::lookAt(e->camera, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+  e->model = glm::mat4(1.0f);
+  e->light = glm::vec3(0, 5, 10);
+  return e;
+}
+
+void
+update_env(Env *e)
+{
+  e->camera = glm::rotate(e->camera, 0.01f, glm::vec3(0.0f, 1.0f, 0.0f));
+  e->view = glm::lookAt(e->camera, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+}
+
+void
+set_obj_uniform_variables(zgn_opengl_shader_program *shader, Env *e)
+{
+  set_shader_uniform_variable(shader, "Model", e->model);
+  set_shader_uniform_variable(shader, "View", e->view);
+  set_shader_uniform_variable(shader, "Projection", e->projection);
+  set_shader_uniform_variable(shader, "LightPos", e->light);
+  set_shader_uniform_variable(shader, "Camera", e->camera);
+}
+
+zgn_opengl_vertex_buffer *
+opengl_setup_vertex_buffer(
+    zgn_opengl *opengl, wl_shm *shm, Vertex *points, uint points_len)
+{
+  zgn_opengl_vertex_buffer *vertex_buffer =
+      zgn_opengl_create_vertex_buffer(opengl);
+  uint points_size = sizeof(Vertex) * points_len;
+  buffer *vertex_buffer_data = create_buffer(shm, points_size);
+  Vertex *vertices = (Vertex *)vertex_buffer_data->data;
+  memcpy(vertices, points, points_size);
+  zgn_opengl_vertex_buffer_attach(vertex_buffer, vertex_buffer_data->buffer);
+  return vertex_buffer;
+}
+
+// bind to the vertex buffer
+
+// ?? texture??
+
+// draw (non-obj specific)
