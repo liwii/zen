@@ -69,11 +69,6 @@ Env *
 setup_env()
 {
   Env *e = (Env *)malloc(sizeof(Env));
-  e->projection =
-      glm::perspective(glm::radians(45.0f), 4.0f / 3.0f, 0.1f, 100.0f);
-  e->camera = glm::vec3(4, 3, 3);
-  e->view = glm::lookAt(e->camera, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
-  e->model = glm::mat4(1.0f);
   e->light = glm::vec3(0, 5, 10);
   return e;
 }
@@ -81,18 +76,13 @@ setup_env()
 void
 update_env(Env *e)
 {
-  e->camera = glm::rotate(e->camera, 0.01f, glm::vec3(0.0f, 1.0f, 0.0f));
-  e->view = glm::lookAt(e->camera, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+  (void)e;
 }
 
 void
 set_obj_uniform_variables(zgn_opengl_shader_program *shader, Env *e)
 {
-  // set_shader_uniform_variable(shader, "Model", e->model);
-  // set_shader_uniform_variable(shader, "View", e->view);
-  // set_shader_uniform_variable(shader, "Projection", e->projection);
   set_shader_uniform_variable(shader, "LightPos", e->light);
-  set_shader_uniform_variable(shader, "Camera", e->camera);
 }
 
 zgn_opengl_vertex_buffer *

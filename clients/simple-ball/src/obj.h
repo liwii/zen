@@ -15,6 +15,7 @@ const char *const vertex_shader =
     "out vec2 UV;\n"
     "out vec3 norm;\n"
     "out vec3 fragPos;\n"
+    "out vec3 cameraPos;\n"
     "\n"
     "uniform mat4 zModel;\n"
     "uniform mat4 zView;\n"
@@ -27,6 +28,7 @@ const char *const vertex_shader =
     "    UV = vertexUV;\n"
     "    norm = mat3(transpose(inverse(zModel))) * vertexNorm;\n"
     "    fragPos = vec3(zModel * vec4(vertexPosition_modelspace, 1.0));\n"
+    "    cameraPos = vec3(zView[3]) / zView[3][3];"
     "}\n";
 
 const char *const fragment_shader =
@@ -35,11 +37,11 @@ const char *const fragment_shader =
     "in vec2 UV;\n"
     "in vec3 norm;\n"
     "in vec3 fragPos;\n"
+    "in vec3 cameraPos;\n"
     "\n"
     "out vec4 color;\n"
     "\n"
     "uniform vec3 LightPos;\n"
-    "uniform vec3 CameraPos;\n"
     //"uniform sampler2D myTextureSampler;\n"
     "\n"
     "void main() {\n"
@@ -49,7 +51,7 @@ const char *const fragment_shader =
     "    float diff = max(dot(norm, lightDir), 0.0);\n"
     "    vec3 diffuse = diff * lightColor * 1.0;\n"
     "\n"
-    "    vec3 viewDir = normalize(CameraPos - fragPos);\n"
+    "    vec3 viewDir = normalize(cameraPos - fragPos);\n"
     "    vec3 reflectDir = reflect(-lightDir, norm);\n"
     "\n"
     "    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);\n"
@@ -74,10 +76,6 @@ struct Vertex {
 };
 
 struct Env {
-  glm::mat4 projection;
-  glm::mat4 view;
-  glm::mat4 model;
-  glm::vec3 camera;
   glm::vec3 light;
 };
 
