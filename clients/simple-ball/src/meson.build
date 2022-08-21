@@ -5,6 +5,7 @@ srcs_simple_ball = [
     'buffer.cc',
     'opengl.cc',
     'obj.cc',
+    'loader.cc',
     zigen_protocol_c,
     zigen_client_protocol_h,
     zigen_shell_protocol_c,

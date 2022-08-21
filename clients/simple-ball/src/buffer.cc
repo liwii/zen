@@ -6,8 +6,6 @@
 #include <unistd.h>
 #include <wayland-client.h>
 
-#include "main.h"
-
 int
 create_shared_fd(off_t size)
 {
@@ -81,4 +79,20 @@ create_buffer(wl_shm *shm, int32_t stride, int32_t height, int32_t width,
       wl_shm_pool_create_buffer(buf->pool, 0, width, height, stride, format);
 
   return buf;
+}
+
+void
+update_texture_buffer(buffer *buf, Texture *t)
+{
+  // t holds the bgr texture data.
+  // This function refills buf->data with the bgra value
+  // of the texture data.
+  ColorBGRA *pixel = (ColorBGRA *)buf->data;
+  for (unsigned int i = 0; i < t->imageSize / 3; ++i) {
+    pixel->a = UINT8_MAX;
+    pixel->b = t->data[3 * i];
+    pixel->g = t->data[3 * i + 1];
+    pixel->r = t->data[3 * i + 2];
+    pixel++;
+  }
 }

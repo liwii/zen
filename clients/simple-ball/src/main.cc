@@ -18,6 +18,7 @@
 
 #include "buffer.h"
 #include "cuboid_window.h"
+#include "loader.h"
 #include "obj.h"
 #include "opengl.h"
 #include "ray.h"
@@ -107,8 +108,13 @@ next_frame(struct app *app, uint32_t time)
 }
 
 int
-main(void)
+main(int argc, char **argv)
 {
+  if (argc < 2) {
+    fprintf(stderr, "Missing argument: texture-file\n");
+    return EXIT_FAILURE;
+  }
+  char *image_path = argv[1];
   struct app app;
   app.display = wl_display_connect("zigen-0");
 
@@ -133,18 +139,23 @@ main(void)
   shader = zgn_opengl_create_shader_program(app.opengl);
   app.shader = shader;
 
-  // struct zgn_opengl_texture *texture;
-  // texture = zgn_opengl_create_texture(app.opengl);
-  // app.texture = texture;
+  struct zgn_opengl_texture *texture;
+  texture = zgn_opengl_create_texture(app.opengl);
+  app.texture = texture;
 
   struct zgn_opengl_component *component;
   component = zgn_opengl_create_opengl_component(app.opengl, virtual_object);
   app.component = component;
 
-  // struct buffer *texture_data;
-  // texture_data = create_buffer(app.shm, OBJ_TEXTURE_WIDTH * 4,
-  //     OBJ_TEXTURE_HEIGHT, OBJ_TEXTURE_WIDTH, WL_SHM_FORMAT_ARGB8888);
-  // app.texture_buffer = texture_data;
+  struct buffer *texture_buffer;
+  Texture *t = load_bmp(image_path);
+  // update, bufferにデータを詰める
+  texture_buffer = create_buffer(app.shm, (int32_t)t->width * 4,
+      (int32_t)t->height, (int32_t)t->height, WL_SHM_FORMAT_ARGB8888);
+  update_texture_buffer(texture_buffer, t);
+  app.texture_buffer = texture_buffer;
+  zgn_opengl_texture_attach_2d(app.texture, app.texture_buffer->buffer);
+  zgn_opengl_component_attach_texture(app.component, app.texture);
 
   size_t vertex_shader_len = strlen(vertex_shader);
   int vertex_shader_fd = get_shared_shader_fd(vertex_shader);
@@ -174,13 +185,6 @@ main(void)
   zgn_opengl_component_add_vertex_attribute(component, 2, 3,
       ZGN_OPENGL_VERTEX_ATTRIBUTE_TYPE_FLOAT, false, sizeof(Vertex),
       offsetof(Vertex, norm));
-
-  // int texture_fragment_shader_fd =
-  //     get_shared_shader_fd(texture_fragment_shader);
-  // assert(texture_fragment_shader_fd != -1);
-
-  // zgn_opengl_shader_program_set_fragment_shader(front_shader,
-  //     texture_fragment_shader_fd, strlen(texture_fragment_shader));
 
   Vertex *points = get_points();
   ushort *indices = vertex_indices();
