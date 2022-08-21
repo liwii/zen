@@ -14,9 +14,9 @@ add_point(Vertex *v, int i, int j)
   float theta = glm::radians(360.0f / OBJ_NUM_POINTS_R * j);
   float psi = glm::radians(360.0f / OBJ_NUM_POINTS_R * i);
 
-  (v->p).x = glm::sin(theta) * glm::cos(psi);
-  (v->p).y = glm::cos(theta);
-  (v->p).z = glm::sin(theta) * glm::sin(psi);
+  (v->p).x = 2 * glm::sin(theta) * glm::cos(psi);
+  (v->p).y = 2 * glm::cos(theta);
+  (v->p).z = 2 * glm::sin(theta) * glm::sin(psi);
 
   (v->uv).x = 1.0f - 1.0f / OBJ_NUM_POINTS_R * i;
   (v->uv).y = 1.0f - 1.0f / (OBJ_NUM_POINTS_R / 2) * j;
