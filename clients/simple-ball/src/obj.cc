@@ -88,9 +88,9 @@ update_env(Env *e)
 void
 set_obj_uniform_variables(zgn_opengl_shader_program *shader, Env *e)
 {
-  set_shader_uniform_variable(shader, "Model", e->model);
-  set_shader_uniform_variable(shader, "View", e->view);
-  set_shader_uniform_variable(shader, "Projection", e->projection);
+  // set_shader_uniform_variable(shader, "Model", e->model);
+  // set_shader_uniform_variable(shader, "View", e->view);
+  // set_shader_uniform_variable(shader, "Projection", e->projection);
   set_shader_uniform_variable(shader, "LightPos", e->light);
   set_shader_uniform_variable(shader, "Camera", e->camera);
 }
