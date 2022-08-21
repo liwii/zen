@@ -76,13 +76,13 @@ setup_env()
 void
 update_env(Env *e)
 {
-  (void)e;
+  e->light = glm::rotate(e->light, 0.01f, glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
 void
 set_obj_uniform_variables(zgn_opengl_shader_program *shader, Env *e)
 {
-  set_shader_uniform_variable(shader, "LightPos", e->light);
+  set_shader_uniform_variable(shader, "LightPosRelative", e->light);
 }
 
 zgn_opengl_vertex_buffer *
