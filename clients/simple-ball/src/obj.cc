@@ -8,6 +8,8 @@
 #include "opengl.h"
 #include "string.h"
 
+const glm::vec3 RotationAxis(0.0f, 1.0f, 0.0f);
+
 void
 add_point(Vertex *v, int i, int j)
 {
@@ -70,19 +72,22 @@ setup_env()
 {
   Env *e = (Env *)malloc(sizeof(Env));
   e->light = glm::vec3(0, 5, 10);
+  e->rotate = glm::mat4(1.0f);
   return e;
 }
 
 void
 update_env(Env *e)
 {
-  e->light = glm::rotate(e->light, 0.01f, glm::vec3(0.0f, 1.0f, 0.0f));
+  e->light = glm::rotate(e->light, 0.01f, RotationAxis);
+  e->rotate = e->rotate * glm::rotate(0.005f, RotationAxis);
 }
 
 void
 set_obj_uniform_variables(zgn_opengl_shader_program *shader, Env *e)
 {
   set_shader_uniform_variable(shader, "LightPosRelative", e->light);
+  set_shader_uniform_variable(shader, "Rotate", e->rotate);
 }
 
 zgn_opengl_vertex_buffer *

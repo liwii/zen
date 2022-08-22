@@ -22,14 +22,16 @@ const char *const vertex_shader =
     "uniform mat4 zView;\n"
     "uniform mat4 zProjection;\n"
     "uniform vec3 LightPosRelative;\n"
+    "uniform mat4 Rotate;\n"
     "\n"
     "void main() {\n"
-    "    gl_Position = zProjection * zView * zModel * "
+    "    mat4 Model = zModel * Rotate;\n"
+    "    gl_Position = zProjection * zView * Model * "
     "vec4(vertexPosition_modelspace, 1);\n"
     "\n"
     "    UV = vertexUV;\n"
-    "    norm = mat3(transpose(inverse(zModel))) * vertexNorm;\n"
-    "    fragPos = vec3(zModel * vec4(vertexPosition_modelspace, 1.0));\n"
+    "    norm = mat3(transpose(inverse(Model))) * vertexNorm;\n"
+    "    fragPos = vec3(Model * vec4(vertexPosition_modelspace, 1.0));\n"
     "    float w = zView[3][3];\n"
     "    cameraPos = vec3(zView[3]) / w;\n"
     "    lightPos = mat3(zModel) * LightPosRelative / w;\n"
@@ -83,6 +85,7 @@ struct Vertex {
 
 struct Env {
   glm::vec3 light;
+  glm::mat4 rotate;
 };
 
 Vertex *get_points();
