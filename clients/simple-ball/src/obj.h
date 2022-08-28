@@ -66,7 +66,7 @@ const char *const fragment_shader =
     "    vec4 objectColor = texture(userTexture, UV);\n"
     "    vec3 objectColor3d = vec3(objectColor);\n"
     "    float objecta = objectColor[3];\n"
-    "    float ambient = 0.2;\n"
+    "    float ambient = 0.4;\n"
     "    color = vec4((ambient + diffuse + specular) * lightColor * "
     "objectColor3d, objecta);\n"
     "}\n"

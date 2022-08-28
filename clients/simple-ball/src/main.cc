@@ -149,9 +149,8 @@ main(int argc, char **argv)
 
   struct buffer *texture_buffer;
   Texture *t = load_bmp(image_path);
-  // update, bufferにデータを詰める
   texture_buffer = create_buffer(app.shm, (int32_t)t->width * 4,
-      (int32_t)t->height, (int32_t)t->height, WL_SHM_FORMAT_ARGB8888);
+      (int32_t)t->height, (int32_t)t->width, WL_SHM_FORMAT_ARGB8888);
   update_texture_buffer(texture_buffer, t);
   app.texture_buffer = texture_buffer;
   zgn_opengl_texture_attach_2d(app.texture, app.texture_buffer->buffer);
