@@ -6,6 +6,7 @@
 #include <zen-common.h>
 
 #include "zen/screen/renderer.h"
+#include "zen/screen/zigzag-layout.h"
 
 static void zn_output_destroy(struct zn_output *self);
 
@@ -107,6 +108,7 @@ zn_output_create(struct wlr_output *wlr_output)
 {
   struct zn_output *self;
   struct wlr_output_mode *mode;
+  struct zn_server *server = zn_server_get_singleton();
 
   self = zalloc(sizeof *self);
   if (self == NULL) {
@@ -156,7 +158,31 @@ zn_output_create(struct wlr_output *wlr_output)
     goto err_screen;
   }
 
+  struct zen_zigzag_layout_state *state;
+  state = zalloc(sizeof *state);
+  if (state == NULL) {
+    zn_error("Failed to allocate memory");
+    goto err_screen;
+  }
+
+  int output_width, output_height;
+  wlr_output_transformed_resolution(wlr_output, &output_width, &output_height);
+
+  struct zigzag_layout *node_layout = zigzag_layout_create(
+      output_width, output_height, (void *)state, zen_zigzag_layout_on_damage);
+
+  if (node_layout == NULL) {
+    zn_error("Failed to create zigzag_layout");
+    goto err_state;
+  }
+
+  zen_zigzag_layout_setup_default(node_layout, server);
+  self->node_layout = node_layout;
+
   return self;
+
+err_state:
+  free(state);
 
 err_screen:
   zn_screen_destroy(self->screen);
@@ -174,6 +200,9 @@ err:
 static void
 zn_output_destroy(struct zn_output *self)
 {
+  free(self->node_layout->state);
+  zigzag_node_cleanup_list(&self->node_layout->nodes);
+  zigzag_layout_destroy(self->node_layout);
   wl_list_remove(&self->damage_frame_listener.link);
   wl_list_remove(&self->wlr_output_destroy_listener.link);
   zn_screen_destroy(self->screen);

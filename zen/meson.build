@@ -19,6 +19,7 @@ _zen_srcs = [
   'screen/renderer.c',
   'screen/xdg-toplevel.c',
   'screen/cursor-grab/default.c',
+  'screen/zigzag-layout.c',
 
   'input/binding.c',
   'input/input-device.c',
@@ -47,6 +48,7 @@ _zen_deps = [
   wlr_glew_renderer_dep,
   xkbcommon_dep,
   zen_common_dep,
+  zigzag_dep,
   zgnr_dep,
   znr_remote_dep,
 ]

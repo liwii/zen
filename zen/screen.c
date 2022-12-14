@@ -58,7 +58,6 @@ zn_screen_create(
   wl_signal_init(&self->events.destroy);
 
   return self;
-
 err:
   return NULL;
 }

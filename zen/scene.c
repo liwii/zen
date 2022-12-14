@@ -20,6 +20,9 @@ zn_scene_ensure_dangling_board(struct zn_scene *self)
   }
 
   board = zn_board_create();
+  double width, height;
+  zn_board_get_effective_size(board, &width, &height);
+  zn_error("Boards size: width: %f, height: %f", width, height);
 
   wl_list_insert(&self->board_list, &board->link);
 

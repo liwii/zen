@@ -114,6 +114,7 @@ wlr_glew_renderer_dep = dependency('wlr-glew-renderer', version: wlr_glew_render
 xkbcommon_dep = dependency('xkbcommon')
 zen_remote_server_dep = dependency('zen-remote-server', version: zen_remote_server_req)
 zigen_protocols_dep = dependency('zigen-protocols', version: zigen_protocols_req)
+zigzag_dep = dependency('zigzag')
 
 if get_option('cui-client')
   wayland_client_dep = dependency('wayland-client', version: wayland_req)
